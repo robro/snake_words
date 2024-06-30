@@ -2,8 +2,8 @@ const std = @import("std");
 const rl = @import("raylib");
 const engine = @import("engine");
 
-const Grid = engine.grid.Grid;
-const Cell = engine.grid.Cell;
+const Grid = @import("grid.zig").Grid;
+const Cell = @import("grid.zig").Cell;
 const Vector2 = rl.Vector2;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;

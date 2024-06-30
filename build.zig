@@ -58,6 +58,8 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("engine", engine);
     engine.addImport("raylib", raylib);
+    engine.addImport("objects", objects);
+
     exe.root_module.addImport("objects", objects);
     objects.addImport("raylib", raylib);
     objects.addImport("engine", engine);

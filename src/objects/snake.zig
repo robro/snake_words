@@ -2,11 +2,11 @@ const std = @import("std");
 const rl = @import("raylib");
 const engine = @import("engine");
 
+const Grid = @import("grid.zig").Grid;
+const Cell = @import("grid.zig").Cell;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
-const Grid = engine.grid.Grid;
-const Cell = engine.grid.Cell;
 
 const Facing = enum {
     up,

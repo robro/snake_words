@@ -4,7 +4,7 @@ const engine = @import("engine");
 const objects = @import("objects");
 
 const Allocator = std.mem.Allocator;
-const Cell = engine.grid.Cell;
+const Cell = objects.grid.Cell;
 
 const grid_rows = 30;
 const grid_cols = 30;
@@ -19,7 +19,7 @@ pub fn main() !void {
 
     var alloc = std.heap.page_allocator;
 
-    var grid = try engine.grid.createGrid(grid_rows, grid_cols, &alloc);
+    var grid = try objects.grid.createGrid(grid_rows, grid_cols, &alloc);
     defer grid.free(&alloc);
 
     grid.fill(Cell.empty_cell);
