@@ -4,6 +4,7 @@ const engine = @import("engine");
 const objects = @import("objects");
 
 const Allocator = std.mem.Allocator;
+const Cell = engine.grid.Cell;
 
 const grid_rows = 30;
 const grid_cols = 30;
@@ -21,7 +22,7 @@ pub fn main() !void {
     const grid = try engine.grid.createGrid(grid_rows, grid_cols, &alloc);
     defer engine.grid.freeGrid(grid, &alloc);
 
-    engine.grid.fillGrid(grid, '.', rl.Color.dark_blue);
+    engine.grid.fillGrid(grid, Cell.empty_cell);
     engine.render.setFont(rl.loadFontEx(font_path, grid_size, null));
 
     var snake = try objects.snake.createSnake("snake", 0.1, .{ .x = 5, .y = 0 }, .right, &alloc);
@@ -29,7 +30,7 @@ pub fn main() !void {
 
     while (!rl.windowShouldClose()) {
         snake.update();
-        engine.grid.fillGrid(grid, '.', rl.Color.dark_blue);
+        engine.grid.fillGrid(grid, Cell.empty_cell);
         snake.draw(grid);
 
         rl.beginDrawing();

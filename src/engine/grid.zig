@@ -7,6 +7,8 @@ const Vector2 = rl.Vector2;
 pub const Cell = struct {
     char: u8,
     color: rl.Color,
+
+    pub const empty_cell = Cell{ .char = '.', .color = rl.Color.dark_blue };
 };
 
 pub fn createGrid(rows: usize, cols: usize, alloc: *Allocator) ![][]Cell {
@@ -29,11 +31,8 @@ pub fn freeGrid(grid: [][]Cell, alloc: *Allocator) void {
     alloc.free(grid);
 }
 
-pub fn fillGrid(grid: [][]Cell, char: u8, color: rl.Color) void {
+pub fn fillGrid(grid: [][]Cell, cell: Cell) void {
     for (grid) |row| {
-        for (row) |*item| {
-            item.char = char;
-            item.color = color;
-        }
+        for (row) |*c| c.* = cell;
     }
 }
