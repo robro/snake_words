@@ -3,7 +3,7 @@ const rl = @import("raylib");
 const Vector2 = rl.Vector2;
 const Cell = @import("grid.zig").Cell;
 
-var font: ?rl.Font = null;
+var _font: ?rl.Font = null;
 
 pub fn renderGrid(grid: [][]Cell, position: Vector2, grid_size: usize) void {
     var text: [1:0]u8 = .{0};
@@ -11,7 +11,7 @@ pub fn renderGrid(grid: [][]Cell, position: Vector2, grid_size: usize) void {
         for (row, 0..) |item, x| {
             text[0] = item.char;
             rl.drawTextEx(
-                if (font == null) rl.getFontDefault() else font.?,
+                if (_font == null) rl.getFontDefault() else _font.?,
                 &text,
                 position.add(.{
                     .x = @floatFromInt(x * grid_size),
@@ -25,6 +25,6 @@ pub fn renderGrid(grid: [][]Cell, position: Vector2, grid_size: usize) void {
     }
 }
 
-pub fn setFont(f: rl.Font) void {
-    font = f;
+pub fn setFont(font: rl.Font) void {
+    _font = font;
 }

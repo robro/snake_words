@@ -7,8 +7,8 @@ const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
 const Cell = engine.grid.Cell;
 
-var last_tick: f64 = 0;
-var last_key: rl.KeyboardKey = .key_null;
+var _last_tick: f64 = 0;
+var _last_key: rl.KeyboardKey = .key_null;
 
 const Facing = enum {
     up,
@@ -30,14 +30,14 @@ pub const Snake = struct {
 
     pub fn update(self: *Snake) void {
         const key_pressed = rl.getKeyPressed();
-        if (key_pressed != .key_null) last_key = key_pressed;
+        if (key_pressed != .key_null) _last_key = key_pressed;
 
         const time = rl.getTime();
-        if (time < last_tick + self.tick) return;
-        last_tick = time;
+        if (time < _last_tick + self.tick) return;
+        _last_tick = time;
 
         var facing = self.head().facing;
-        switch (last_key) {
+        switch (_last_key) {
             .key_up => facing = if (facing != .down) .up else .down,
             .key_down => facing = if (facing != .up) .down else .up,
             .key_left => facing = if (facing != .right) .left else .right,
