@@ -1,24 +1,33 @@
 const std = @import("std");
+const rl = @import("raylib");
+const engine = @import("engine");
+
+const Allocator = std.mem.Allocator;
+
+const grid_rows = 30;
+const grid_cols = 30;
+const grid_size = 32;
+const font_path = "resources/fonts/consola.ttf";
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    rl.setConfigFlags(.{ .msaa_4x_hint = true, .vsync_hint = true });
+    rl.initWindow(grid_cols * grid_size, grid_rows * grid_size, "snakegram");
+    defer rl.closeWindow();
+    rl.setTargetFPS(60);
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    var alloc = std.heap.page_allocator;
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    const grid = try engine.grid.createGrid(grid_rows, grid_cols, &alloc);
+    defer engine.grid.freeGrid(grid, &alloc);
 
-    try bw.flush(); // don't forget to flush!
-}
+    engine.grid.fillGrid(grid, 'Z', rl.Color.ray_white);
+    engine.render.setFont(rl.loadFontEx(font_path, grid_size, null));
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+    while (!rl.windowShouldClose()) {
+        rl.beginDrawing();
+        rl.clearBackground(rl.Color.black);
+        engine.render.renderGrid(grid, rl.Vector2.zero(), grid_size);
+        rl.drawFPS(0, 0);
+        defer rl.endDrawing();
+    }
 }

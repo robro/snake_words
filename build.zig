@@ -36,6 +36,26 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const raylib_dep = b.dependency("raylib-zig", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const raylib = raylib_dep.module("raylib"); // main raylib module
+    const raygui = raylib_dep.module("raygui"); // raygui module
+    const raylib_artifact = raylib_dep.artifact("raylib"); // raylib C library
+
+    exe.linkLibrary(raylib_artifact);
+    exe.root_module.addImport("raylib", raylib);
+    exe.root_module.addImport("raygui", raygui);
+
+    const engine = b.addModule("engine", .{
+        .root_source_file = b.path("src/engine/engine.zig"),
+    });
+
+    exe.root_module.addImport("engine", engine);
+    engine.addImport("raylib", raylib);
+
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
