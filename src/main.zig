@@ -13,7 +13,7 @@ const font_path = "resources/fonts/consola.ttf";
 
 pub fn main() !void {
     rl.setConfigFlags(.{ .msaa_4x_hint = true, .vsync_hint = true });
-    rl.initWindow(grid_cols * cell_size, grid_rows * cell_size, "snakagram");
+    rl.initWindow(grid_cols * cell_size, grid_cols * cell_size, "snakagram");
     defer rl.closeWindow();
     rl.setTargetFPS(60);
 
@@ -27,7 +27,7 @@ pub fn main() !void {
 
     var snake = try objects.snake.createSnake(
         "snake",
-        rl.Color.yellow,
+        rl.Color.green,
         0.1,
         .{ .x = 5, .y = 0 },
         .right,
@@ -35,9 +35,21 @@ pub fn main() !void {
     );
     defer snake.free();
 
+    var charGroup = objects.char.createCharGroup(&alloc);
+    defer charGroup.free();
+
+    var timer: f64 = 0;
+    var alphabet = [_:0]u8{0} ** 26;
+    inline for ('a'..'{', 0..) |char, i| alphabet[i] = char;
+
     while (!rl.windowShouldClose()) {
         snake.update();
         grid.fill(Cell.empty_cell);
+        if (rl.getTime() > timer) {
+            try charGroup.newChars(&alphabet, rl.Color.magenta, &grid);
+            timer = rl.getTime() + 3;
+        }
+        charGroup.draw(&grid);
         snake.draw(&grid);
 
         rl.beginDrawing();

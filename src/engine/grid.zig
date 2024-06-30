@@ -29,7 +29,7 @@ pub const Grid = struct {
         self.cells[@intFromFloat(coord.y)][@intFromFloat(coord.x)] = cell;
     }
 
-    pub fn getFreeCoord(self: *Grid, free_char: u8, alloc: *Allocator) !Vector2 {
+    pub fn getFreeCoord(self: *Grid, free_char: u8, alloc: *const Allocator) !Vector2 {
         const coords = try alloc.alloc(Vector2, self.rows() * self.cols());
         defer alloc.free(coords);
 
@@ -37,10 +37,11 @@ pub const Grid = struct {
         for (self.cells, 0..) |*row, y| {
             for (row.*, 0..) |*cell, x| {
                 if (cell.char != free_char) continue;
-                coords[i] = Vector2{ .x = x, .y = y };
+                coords[i] = Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
                 i += 1;
             }
         }
+        if (i == 0) return error.NoFreeCoords;
         return coords[std.crypto.random.uintLessThan(usize, i)];
     }
 
