@@ -1,7 +1,7 @@
 const rl = @import("raylib");
 
 const Vector2 = rl.Vector2;
-const ColorChar = @import("grid.zig").ColorChar;
+const ColorChar = @import("grid.zig").GridCell;
 
 var font: ?rl.Font = null;
 
