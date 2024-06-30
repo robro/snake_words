@@ -5,7 +5,7 @@ const engine = @import("engine");
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
-const GridCell = engine.grid.GridCell;
+const Cell = engine.grid.Cell;
 
 var last_tick: f64 = 0;
 var last_key: rl.KeyboardKey = .key_null;
@@ -55,7 +55,7 @@ pub const Snake = struct {
         self.tail = self.body.pop();
     }
 
-    pub fn draw(self: *Snake, grid: [][]GridCell) void {
+    pub fn draw(self: *Snake, grid: [][]Cell) void {
         for (self.body.items, 0..) |*part, i| {
             engine.grid.drawToCell(grid, part.coord, .{
                 .char = self.chars.items[i],

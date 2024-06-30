@@ -1,11 +1,11 @@
 const rl = @import("raylib");
 
 const Vector2 = rl.Vector2;
-const ColorChar = @import("grid.zig").GridCell;
+const Cell = @import("grid.zig").Cell;
 
 var font: ?rl.Font = null;
 
-pub fn renderGrid(grid: [][]ColorChar, position: Vector2, grid_size: usize) void {
+pub fn renderGrid(grid: [][]Cell, position: Vector2, grid_size: usize) void {
     var text: [1:0]u8 = .{0};
     for (grid, 0..) |row, y| {
         for (row, 0..) |item, x| {
