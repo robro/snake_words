@@ -28,6 +28,40 @@ pub const Snake = struct {
     _tail: ?Part = null,
     _last_tick: f64 = 0,
 
+    pub fn init(
+        text: [:0]const u8,
+        color: rl.Color,
+        tick: f64,
+        coord: Vector2,
+        facing: Facing,
+        alloc: Allocator,
+    ) !Snake {
+        var cells = ArrayList(Cell).init(alloc);
+        try cells.resize(text.len);
+        var body = ArrayList(Part).init(alloc);
+        try body.resize(text.len);
+
+        var offset: f32 = undefined;
+        for (body.items, 0..) |*part, i| {
+            cells.items[i] = .{ .char = text[i], .color = color };
+            offset = @floatFromInt(i);
+            part.facing = facing;
+            part.coord = coord;
+            switch (facing) {
+                .up => part.coord.y += offset,
+                .down => part.coord.y -= offset,
+                .left => part.coord.x += offset,
+                .right => part.coord.x -= offset,
+            }
+        }
+        return Snake{ .cells = cells, .tick = tick, .parts = body };
+    }
+
+    pub fn deinit(self: *Snake) void {
+        self.cells.deinit();
+        self.parts.deinit();
+    }
+
     pub fn update(self: *Snake) void {
         const time = rl.getTime();
         if (time < self._last_tick + self.tick) return;
@@ -52,52 +86,18 @@ pub const Snake = struct {
         self._tail = self.parts.pop();
     }
 
+    pub fn add(self: *Snake, cell: Cell) !void {
+        try self.parts.append(self._tail.?);
+        try self.cells.append(cell);
+    }
+
     pub fn draw(self: *Snake, grid: *Grid) void {
         for (self.parts.items, 0..) |*part, i| {
             grid.setCell(part.coord, self.cells.items[i]);
         }
     }
 
-    pub fn add(self: *Snake, cell: Cell) void {
-        self.parts.append(self._tail.?);
-        self.cells.append(cell);
-    }
-
     pub fn head(self: *Snake) *Part {
         return &self.parts.items[0];
     }
-
-    pub fn free(self: *Snake) void {
-        self.cells.deinit();
-        self.parts.deinit();
-    }
 };
-
-pub fn createSnake(
-    word: [:0]const u8,
-    color: rl.Color,
-    tick: f64,
-    coord: Vector2,
-    facing: Facing,
-    alloc: *Allocator,
-) !Snake {
-    var cells = ArrayList(Cell).init(alloc.*);
-    try cells.resize(word.len);
-    var body = ArrayList(Part).init(alloc.*);
-    try body.resize(word.len);
-
-    var offset: f32 = undefined;
-    for (body.items, 0..) |*part, i| {
-        cells.items[i] = .{ .char = word[i], .color = color };
-        offset = @floatFromInt(i);
-        part.facing = facing;
-        part.coord = coord;
-        switch (facing) {
-            .up => part.coord.y += offset,
-            .down => part.coord.y -= offset,
-            .left => part.coord.x += offset,
-            .right => part.coord.x -= offset,
-        }
-    }
-    return Snake{ .cells = cells, .tick = tick, .parts = body };
-}

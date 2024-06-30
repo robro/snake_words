@@ -2,9 +2,14 @@ const std = @import("std");
 const rl = @import("raylib");
 const engine = @import("engine");
 const objects = @import("objects");
+const util = @import("util");
 
 const Allocator = std.mem.Allocator;
 const Cell = objects.grid.Cell;
+const Grid = objects.grid.Grid;
+const Snake = objects.snake.Snake;
+const CharGroup = objects.char.CharGroup;
+const State = objects.state.State;
 
 const grid_rows = 30;
 const grid_cols = 30;
@@ -17,42 +22,32 @@ pub fn main() !void {
     rl.initWindow(grid_cols * cell_size, grid_cols * cell_size, "snakagram");
     defer rl.closeWindow();
 
-    var alloc = std.heap.page_allocator;
-
-    var grid = try objects.grid.createGrid(grid_rows, grid_cols, &alloc);
-    defer grid.free(&alloc);
-
-    grid.fill(Cell.empty_cell);
     engine.render.setFont(rl.loadFontEx(font_path, cell_size, null));
 
-    var snake = try objects.snake.createSnake(
+    const alloc = std.heap.page_allocator;
+
+    var grid = try Grid.init(grid_rows, grid_cols, alloc);
+    defer grid.deinit();
+    grid.fill(Cell.empty_cell);
+
+    var snake = try Snake.init(
         "snake",
         rl.Color.green,
         0.1,
-        .{ .x = 5, .y = 0 },
+        .{ .x = 5, .y = 5 },
         .right,
-        &alloc,
+        alloc,
     );
-    defer snake.free();
+    defer snake.deinit();
 
-    var charGroup = objects.char.createCharGroup(&alloc);
-    defer charGroup.free();
+    var char_group = try CharGroup.init(util.alphabet, rl.Color.purple, &grid);
+    defer char_group.deinit();
 
-    var timer: f64 = 0;
-    var alphabet = [_:0]u8{0} ** 26;
-    inline for ('a'..'{', 0..) |char, i| alphabet[i] = char;
+    var state = State.init(&snake, &grid, &char_group);
 
     while (!rl.windowShouldClose()) {
         engine.input.update();
-
-        snake.update();
-        grid.fill(Cell.empty_cell);
-        if (rl.getTime() > timer) {
-            try charGroup.newChars(&alphabet, rl.Color.magenta, &grid);
-            timer = rl.getTime() + 3;
-        }
-        charGroup.draw(&grid);
-        snake.draw(&grid);
+        try state.update();
 
         rl.beginDrawing();
         defer rl.endDrawing();

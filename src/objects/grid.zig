@@ -13,24 +13,38 @@ pub const Cell = struct {
 
 pub const Grid = struct {
     cells: [][]Cell,
+    alloc: Allocator,
 
-    pub fn rows(self: *Grid) usize {
+    pub fn getRows(self: *Grid) usize {
         return self.cells.len;
     }
 
-    pub fn cols(self: *Grid) usize {
+    pub fn getCols(self: *Grid) usize {
         return self.cells[0].len;
+    }
+
+    pub fn init(rows: usize, cols: usize, alloc: Allocator) !Grid {
+        const cells = try alloc.alloc([]Cell, rows);
+        for (0..rows) |row| {
+            cells[row] = try alloc.alloc(Cell, cols);
+        }
+        return Grid{ .cells = cells, .alloc = alloc };
+    }
+
+    pub fn deinit(self: *Grid) void {
+        for (self.cells) |row| self.alloc.free(row);
+        self.alloc.free(self.cells);
     }
 
     pub fn setCell(self: *Grid, coord: Vector2, cell: Cell) void {
         if (coord.x < 0 or coord.y < 0) return;
-        if (coord.x >= @as(f32, @floatFromInt(self.cols())) or
-            coord.y >= @as(f32, @floatFromInt(self.rows()))) return;
+        if (coord.x >= @as(f32, @floatFromInt(self.getCols())) or
+            coord.y >= @as(f32, @floatFromInt(self.getRows()))) return;
         self.cells[@intFromFloat(coord.y)][@intFromFloat(coord.x)] = cell;
     }
 
     pub fn getFreeCoord(self: *Grid, free_char: u8, alloc: *const Allocator) !Vector2 {
-        const coords = try alloc.alloc(Vector2, self.rows() * self.cols());
+        const coords = try alloc.alloc(Vector2, self.getRows() * self.getCols());
         defer alloc.free(coords);
 
         var i: usize = 0;
@@ -50,17 +64,4 @@ pub const Grid = struct {
             for (row) |*c| c.* = cell;
         }
     }
-
-    pub fn free(self: *Grid, alloc: *Allocator) void {
-        for (self.cells) |row| alloc.free(row);
-        alloc.free(self.cells);
-    }
 };
-
-pub fn createGrid(rows: usize, cols: usize, alloc: *Allocator) !Grid {
-    const cells = try alloc.alloc([]Cell, rows);
-    for (0..rows) |row| {
-        cells[row] = try alloc.alloc(Cell, cols);
-    }
-    return Grid{ .cells = cells };
-}
