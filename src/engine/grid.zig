@@ -19,7 +19,7 @@ pub fn createGrid(rows: usize, cols: usize, alloc: *Allocator) ![][]Cell {
     return grid;
 }
 
-pub fn drawToCell(grid: [][]Cell, coord: Vector2, cell: Cell) void {
+pub fn drawCell(grid: [][]Cell, coord: Vector2, cell: Cell) void {
     if (coord.x < 0 or coord.y < 0) return;
     if (coord.x >= @as(f32, @floatFromInt(grid[0].len)) or
         coord.y >= @as(f32, @floatFromInt(grid.len))) return;

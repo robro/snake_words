@@ -23,9 +23,9 @@ const Part = struct {
 };
 
 pub const Snake = struct {
-    chars: ArrayList(u8),
+    cells: ArrayList(Cell),
     tick: f64,
-    body: ArrayList(Part),
+    parts: ArrayList(Part),
     tail: ?Part = null,
 
     pub fn update(self: *Snake) void {
@@ -51,49 +51,47 @@ pub const Snake = struct {
             .left => coord.x -= 1,
             .right => coord.x += 1,
         }
-        self.body.insert(0, .{ .facing = facing, .coord = coord }) catch unreachable;
-        self.tail = self.body.pop();
+        self.parts.insert(0, .{ .facing = facing, .coord = coord }) catch unreachable;
+        self.tail = self.parts.pop();
     }
 
     pub fn draw(self: *Snake, grid: [][]Cell) void {
-        for (self.body.items, 0..) |*part, i| {
-            engine.grid.drawToCell(grid, part.coord, .{
-                .char = self.chars.items[i],
-                .color = rl.Color.white,
-            });
+        for (self.parts.items, 0..) |*part, i| {
+            engine.grid.drawCell(grid, part.coord, self.cells.items[i]);
         }
     }
 
-    pub fn add(self: *Snake, char: u8) void {
-        self.body.append(self.tail.?);
-        self.chars.append(char);
+    pub fn add(self: *Snake, cell: Cell) void {
+        self.parts.append(self.tail.?);
+        self.cells.append(cell);
     }
 
     pub fn head(self: *Snake) *Part {
-        return &self.body.items[0];
+        return &self.parts.items[0];
     }
 
     pub fn free(self: *Snake) void {
-        self.chars.deinit();
-        self.body.deinit();
+        self.cells.deinit();
+        self.parts.deinit();
     }
 };
 
 pub fn createSnake(
-    text: [:0]const u8,
+    word: [:0]const u8,
+    color: rl.Color,
     tick: f64,
     coord: Vector2,
     facing: Facing,
     alloc: *Allocator,
 ) !Snake {
-    var chars = ArrayList(u8).init(alloc.*);
-    try chars.resize(text.len);
+    var cells = ArrayList(Cell).init(alloc.*);
+    try cells.resize(word.len);
     var body = ArrayList(Part).init(alloc.*);
-    try body.resize(text.len);
+    try body.resize(word.len);
 
     var offset: f32 = undefined;
     for (body.items, 0..) |*part, i| {
-        chars.items[i] = text[i];
+        cells.items[i] = .{ .char = word[i], .color = color };
         offset = @floatFromInt(i);
         part.facing = facing;
         part.coord = coord;
@@ -104,5 +102,5 @@ pub fn createSnake(
             .right => part.coord.x -= offset,
         }
     }
-    return Snake{ .chars = chars, .tick = tick, .body = body };
+    return Snake{ .cells = cells, .tick = tick, .parts = body };
 }

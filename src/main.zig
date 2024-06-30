@@ -25,7 +25,14 @@ pub fn main() !void {
     engine.grid.fillGrid(grid, Cell.empty_cell);
     engine.render.setFont(rl.loadFontEx(font_path, grid_size, null));
 
-    var snake = try objects.snake.createSnake("snake", 0.1, .{ .x = 5, .y = 0 }, .right, &alloc);
+    var snake = try objects.snake.createSnake(
+        "snake",
+        rl.Color.yellow,
+        0.1,
+        .{ .x = 5, .y = 0 },
+        .right,
+        &alloc,
+    );
     defer snake.free();
 
     while (!rl.windowShouldClose()) {
