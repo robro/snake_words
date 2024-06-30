@@ -1,25 +1,25 @@
 const rl = @import("raylib");
 
 const Vector2 = rl.Vector2;
-const Cell = @import("grid.zig").Cell;
+const Grid = @import("grid.zig").Grid;
 
 var _font: ?rl.Font = null;
 
-pub fn renderGrid(grid: [][]Cell, position: Vector2, grid_size: usize) void {
+pub fn renderGrid(grid: *Grid, position: Vector2, cell_size: usize) void {
     var text: [1:0]u8 = .{0};
-    for (grid, 0..) |row, y| {
-        for (row, 0..) |item, x| {
-            text[0] = item.char;
+    for (grid.cells, 0..) |row, y| {
+        for (row, 0..) |cell, x| {
+            text[0] = cell.char;
             rl.drawTextEx(
                 if (_font == null) rl.getFontDefault() else _font.?,
                 &text,
                 position.add(.{
-                    .x = @floatFromInt(x * grid_size),
-                    .y = @floatFromInt(y * grid_size),
+                    .x = @floatFromInt(x * cell_size),
+                    .y = @floatFromInt(y * cell_size),
                 }),
-                @floatFromInt(grid_size),
+                @floatFromInt(cell_size),
                 0,
-                item.color,
+                cell.color,
             );
         }
     }

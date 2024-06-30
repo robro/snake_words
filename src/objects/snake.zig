@@ -5,6 +5,7 @@ const engine = @import("engine");
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
+const Grid = engine.grid.Grid;
 const Cell = engine.grid.Cell;
 
 var _last_tick: f64 = 0;
@@ -55,9 +56,9 @@ pub const Snake = struct {
         self.tail = self.parts.pop();
     }
 
-    pub fn draw(self: *Snake, grid: [][]Cell) void {
+    pub fn draw(self: *Snake, grid: *Grid) void {
         for (self.parts.items, 0..) |*part, i| {
-            engine.grid.drawCell(grid, part.coord, self.cells.items[i]);
+            grid.setCell(part.coord, self.cells.items[i]);
         }
     }
 
