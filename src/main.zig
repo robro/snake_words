@@ -12,10 +12,10 @@ const cell_size = 32;
 const font_path = "resources/fonts/consola.ttf";
 
 pub fn main() !void {
+    rl.setTargetFPS(60);
     rl.setConfigFlags(.{ .msaa_4x_hint = true, .vsync_hint = true });
     rl.initWindow(grid_cols * cell_size, grid_cols * cell_size, "snakagram");
     defer rl.closeWindow();
-    rl.setTargetFPS(60);
 
     var alloc = std.heap.page_allocator;
 
@@ -43,6 +43,8 @@ pub fn main() !void {
     inline for ('a'..'{', 0..) |char, i| alphabet[i] = char;
 
     while (!rl.windowShouldClose()) {
+        engine.input.update();
+
         snake.update();
         grid.fill(Cell.empty_cell);
         if (rl.getTime() > timer) {

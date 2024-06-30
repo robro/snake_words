@@ -8,9 +8,6 @@ const Vector2 = rl.Vector2;
 const Grid = engine.grid.Grid;
 const Cell = engine.grid.Cell;
 
-var _last_tick: f64 = 0;
-var _last_key: rl.KeyboardKey = .key_null;
-
 const Facing = enum {
     up,
     down,
@@ -27,18 +24,17 @@ pub const Snake = struct {
     cells: ArrayList(Cell),
     tick: f64,
     parts: ArrayList(Part),
-    tail: ?Part = null,
+
+    _tail: ?Part = null,
+    _last_tick: f64 = 0,
 
     pub fn update(self: *Snake) void {
-        const key_pressed = rl.getKeyPressed();
-        if (key_pressed != .key_null) _last_key = key_pressed;
-
         const time = rl.getTime();
-        if (time < _last_tick + self.tick) return;
-        _last_tick = time;
+        if (time < self._last_tick + self.tick) return;
+        self._last_tick = time;
 
         var facing = self.head().facing;
-        switch (_last_key) {
+        switch (engine.input.getLastPressed()) {
             .key_up => facing = if (facing != .down) .up else .down,
             .key_down => facing = if (facing != .up) .down else .up,
             .key_left => facing = if (facing != .right) .left else .right,
@@ -53,7 +49,7 @@ pub const Snake = struct {
             .right => coord.x += 1,
         }
         self.parts.insert(0, .{ .facing = facing, .coord = coord }) catch unreachable;
-        self.tail = self.parts.pop();
+        self._tail = self.parts.pop();
     }
 
     pub fn draw(self: *Snake, grid: *Grid) void {
@@ -63,7 +59,7 @@ pub const Snake = struct {
     }
 
     pub fn add(self: *Snake, cell: Cell) void {
-        self.parts.append(self.tail.?);
+        self.parts.append(self._tail.?);
         self.cells.append(cell);
     }
 
