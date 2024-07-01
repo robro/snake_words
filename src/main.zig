@@ -44,6 +44,7 @@ pub fn main() !void {
         alloc,
     );
     defer snake.deinit();
+    snake.draw(&grid);
 
     var food_group = try FoodGroup.init(util.words[0], rl.Color.orange, &grid);
     defer food_group.deinit();
