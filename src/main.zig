@@ -22,7 +22,7 @@ pub fn main() !void {
     rl.initWindow(grid_cols * cell_size, grid_cols * cell_size, "snakagram");
     defer rl.closeWindow();
 
-    engine.render.setFont(rl.loadFontEx(font_path, cell_size, null));
+    engine.render.setFont(rl.loadFontEx(font_path, cell_size * 2, null));
 
     const alloc = std.heap.page_allocator;
 
@@ -30,13 +30,13 @@ pub fn main() !void {
     defer grid.deinit();
     grid.fill(Cell.empty_cell);
 
-    var snake = try Snake.init("snake", rl.Color.red, 0.1, .{ .x = 5, .y = 5 }, .right, alloc);
+    var snake = try Snake.init("snake", rl.Color.gray, 0.1, .{ .x = 5, .y = 5 }, .right, alloc);
     defer snake.deinit();
 
     var char_group = try CharGroup.init(util.alphabet, rl.Color.orange, &grid);
     defer char_group.deinit();
 
-    var state = State.init(&snake, &grid, &char_group);
+    var state = try State.init(&snake, &grid, &char_group, alloc);
 
     while (!rl.windowShouldClose()) {
         engine.input.update();
@@ -47,6 +47,17 @@ pub fn main() !void {
 
         rl.clearBackground(rl.Color.black);
         engine.render.renderGrid(&grid, rl.Vector2.zero(), cell_size);
+        rl.drawTextEx(
+            engine.render.getFont(),
+            state.curr_word,
+            .{
+                .x = (grid_cols * cell_size / 2) - (cell_size * 2 * 2.5),
+                .y = grid_rows * cell_size + 10,
+            },
+            cell_size * 2,
+            cell_size,
+            state.color(),
+        );
         rl.drawFPS(grid_cols * cell_size - 32, 0);
     }
 }

@@ -2,8 +2,9 @@ const rl = @import("raylib");
 
 const Vector2 = rl.Vector2;
 const Grid = @import("objects").grid.Grid;
+const Font = rl.Font;
 
-var _font: ?rl.Font = null;
+pub var _font: ?Font = null;
 
 pub fn renderGrid(grid: *Grid, position: Vector2, cell_size: usize) void {
     var text: [1:0]u8 = .{0};
@@ -11,7 +12,7 @@ pub fn renderGrid(grid: *Grid, position: Vector2, cell_size: usize) void {
         for (row, 0..) |cell, x| {
             text[0] = cell.char;
             rl.drawTextEx(
-                if (_font == null) rl.getFontDefault() else _font.?,
+                getFont(),
                 &text,
                 position.add(.{
                     .x = @floatFromInt(x * cell_size),
@@ -25,6 +26,10 @@ pub fn renderGrid(grid: *Grid, position: Vector2, cell_size: usize) void {
     }
 }
 
-pub fn setFont(font: rl.Font) void {
+pub fn setFont(font: Font) void {
     _font = font;
+}
+
+pub fn getFont() Font {
+    return if (_font == null) rl.getFontDefault() else _font.?;
 }

@@ -39,13 +39,7 @@ pub fn newChars(chars: *ArrayList(Char), text: [:0]const u8, color: rl.Color, gr
     try chars.resize(text.len);
     for (text, 0..) |char, i| {
         const coord = try grid.getFreeCoord('.', &std.heap.page_allocator);
-        chars.items[i] = .{
-            .cell = .{
-                .char = char,
-                .color = color,
-            },
-            .coord = coord,
-        };
+        chars.items[i] = .{ .cell = .{ .char = char, .color = color }, .coord = coord };
         grid.setCell(chars.items[i].coord, chars.items[i].cell);
     }
 }

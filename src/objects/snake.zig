@@ -100,4 +100,8 @@ pub const Snake = struct {
     pub fn head(self: *Snake) *Part {
         return &self.parts.items[0];
     }
+
+    pub fn length(self: *Snake) usize {
+        return self.cells.items.len;
+    }
 };
