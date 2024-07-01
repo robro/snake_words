@@ -93,7 +93,7 @@ pub const Snake = struct {
 
     pub fn draw(self: *Snake, grid: *Grid) void {
         for (self.parts.items, 0..) |*part, i| {
-            grid.setCell(part.coord, self.cells.items[i]);
+            grid.setCell(self.cells.items[i], part.coord);
         }
     }
 

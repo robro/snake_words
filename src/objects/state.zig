@@ -7,8 +7,7 @@ const Color = rl.Color;
 const Snake = @import("snake.zig").Snake;
 const Grid = @import("grid.zig").Grid;
 const Cell = @import("grid.zig").Cell;
-const CharGroup = @import("char.zig").CharGroup;
-const newChars = @import("char.zig").newChars;
+const FoodGroup = @import("food.zig").FoodGroup;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
@@ -35,29 +34,28 @@ const word_length = 5;
 pub const State = struct {
     snake: *Snake,
     grid: *Grid,
-    char_group: *CharGroup,
+    food_group: *FoodGroup,
     target_word: [:0]u8,
     curr_word_idx: usize,
     alloc: Allocator,
     color_idx: usize = 0,
 
-    pub fn init(snake: *Snake, grid: *Grid, char_group: *CharGroup, alloc: Allocator) !State {
-        const target_word = try alloc.allocSentinel(u8, word_length, 0);
-        newTarget(target_word);
-        try newChars(
-            &char_group.chars,
-            target_word,
-            fg_colors[0],
-            grid,
-        );
-        return State{
+    pub fn init(snake: *Snake, food_group: *FoodGroup, grid: *Grid, alloc: Allocator) !State {
+        var state = State{
             .snake = snake,
             .grid = grid,
-            .char_group = char_group,
-            .target_word = target_word,
+            .food_group = food_group,
+            .target_word = try alloc.allocSentinel(u8, word_length, 0),
             .curr_word_idx = snake.length(),
             .alloc = alloc,
         };
+        state.newTarget();
+        try state.food_group.spawnFood(
+            state.target_word,
+            fg_colors[0],
+            grid,
+        );
+        return state;
     }
 
     pub fn update(self: *State) !void {
@@ -65,11 +63,11 @@ pub const State = struct {
         self.snake.update();
         self.snake.draw(self.grid);
 
-        for (self.char_group.chars.items, 0..) |*char, i| {
+        for (self.food_group.food_list.items, 0..) |*char, i| {
             if (self.snake.head().coord.equals(char.coord) == 0) {
                 continue;
             }
-            const new_cell = self.char_group.pop(i).cell;
+            const new_cell = self.food_group.pop(i).cell;
             try self.snake.append(new_cell);
 
             if (self.currWordLen() == word_length or
@@ -84,9 +82,8 @@ pub const State = struct {
                 self.curr_word_idx = self.snake.length();
                 self.color_idx += 1;
                 self.color_idx %= fg_colors.len;
-                newTarget(self.target_word);
-                try newChars(
-                    &self.char_group.chars,
+                self.newTarget();
+                try self.food_group.spawnFood(
                     self.target_word,
                     self.fgColor(),
                     self.grid,
@@ -94,7 +91,7 @@ pub const State = struct {
             }
             break;
         }
-        self.char_group.draw(self.grid);
+        self.food_group.draw(self.grid);
     }
 
     pub fn currWord(self: *State) [:0]u8 {
@@ -112,6 +109,14 @@ pub const State = struct {
         return self.snake.length() - self.curr_word_idx;
     }
 
+    pub fn newTarget(self: *State) void {
+        std.mem.copyForwards(
+            u8,
+            self.target_word,
+            util.words[std.crypto.random.uintLessThan(usize, util.words.len)],
+        );
+    }
+
     pub fn fgColor(self: *State) Color {
         return fg_colors[self.color_idx];
     }
@@ -124,11 +129,3 @@ pub const State = struct {
         self.alloc.free(self.target_word);
     }
 };
-
-pub fn newTarget(buf: []u8) void {
-    std.mem.copyForwards(
-        u8,
-        buf,
-        util.words[std.crypto.random.uintLessThan(usize, util.words.len)],
-    );
-}

@@ -36,7 +36,7 @@ pub const Grid = struct {
         self.alloc.free(self.cells);
     }
 
-    pub fn setCell(self: *Grid, coord: Vector2, cell: Cell) void {
+    pub fn setCell(self: *Grid, cell: Cell, coord: Vector2) void {
         if (coord.x < 0 or coord.y < 0) return;
         if (coord.x >= @as(f32, @floatFromInt(self.getCols())) or
             coord.y >= @as(f32, @floatFromInt(self.getRows()))) return;

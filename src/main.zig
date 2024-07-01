@@ -8,7 +8,7 @@ const Allocator = std.mem.Allocator;
 const Cell = objects.grid.Cell;
 const Grid = objects.grid.Grid;
 const Snake = objects.snake.Snake;
-const CharGroup = objects.char.CharGroup;
+const FoodGroup = objects.food.FoodGroup;
 const State = objects.state.State;
 
 const grid_rows = 16;
@@ -33,10 +33,10 @@ pub fn main() !void {
     var snake = try Snake.init("snake", rl.Color.red, 0.1, .{ .x = 5, .y = 5 }, .right, alloc);
     defer snake.deinit();
 
-    var char_group = try CharGroup.init(util.words[0], rl.Color.orange, &grid);
+    var char_group = try FoodGroup.init(util.words[0], rl.Color.orange, &grid);
     defer char_group.deinit();
 
-    var state = try State.init(&snake, &grid, &char_group, alloc);
+    var state = try State.init(&snake, &char_group, &grid, alloc);
 
     while (!rl.windowShouldClose()) {
         engine.input.update();
