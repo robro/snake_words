@@ -52,7 +52,7 @@ pub fn main() !void {
             state.target_word,
             .{
                 .x = (grid_cols * cell_size / 2) - (cell_size * 2 * 2.5),
-                .y = grid_rows * cell_size + 10,
+                .y = grid_rows * cell_size + cell_size,
             },
             cell_size * 2,
             cell_size,
@@ -64,7 +64,7 @@ pub fn main() !void {
             state.currWord(),
             .{
                 .x = (grid_cols * cell_size / 2) - (cell_size * 2 * 2.5),
-                .y = grid_rows * cell_size + 10,
+                .y = grid_rows * cell_size + cell_size,
             },
             cell_size * 2,
             cell_size,

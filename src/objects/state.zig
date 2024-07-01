@@ -17,7 +17,7 @@ const fg_colors = [_]Color{
     Color.green,
     Color.purple,
     Color.yellow,
-    Color.blue,
+    Color.sky_blue,
     Color.red,
 };
 
@@ -72,9 +72,15 @@ pub const State = struct {
             const new_cell = self.char_group.pop(i).cell;
             try self.snake.append(new_cell);
 
-            if (self.currWordLen() == word_length) {
-                // TODO: Do word scoring here
-                // clearWord(self.curr_word);
+            if (self.currWordLen() == word_length or
+                self.target_word[self.currWordLen() - 1] != new_cell.char)
+            {
+                if (self.currWordLen() < word_length) {
+                    for (self.snake.cells.items[self.curr_word_idx..]) |*cell| {
+                        cell.color = Color.gray;
+                    }
+                }
+                // TODO: Score the word
                 self.curr_word_idx = self.snake.length();
                 self.color_idx += 1;
                 self.color_idx %= fg_colors.len;
@@ -118,10 +124,6 @@ pub const State = struct {
         self.alloc.free(self.target_word);
     }
 };
-
-fn clearWord(word: [:0]u8) void {
-    for (word) |*char| char.* = '_';
-}
 
 pub fn newTarget(buf: []u8) void {
     std.mem.copyForwards(
