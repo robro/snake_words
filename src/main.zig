@@ -3,6 +3,7 @@ const rl = @import("raylib");
 const engine = @import("engine");
 const objects = @import("objects");
 const util = @import("util");
+const scratch = @import("scratch");
 
 const Allocator = std.mem.Allocator;
 const Cell = objects.grid.Cell;
@@ -14,13 +15,16 @@ const State = objects.state.State;
 const grid_rows = 12;
 const grid_cols = 12;
 const cell_size = 64;
+const win_width = grid_cols * cell_size;
+const win_height = (grid_rows * cell_size) + (cell_size * 6);
 const font_path = "resources/fonts/consola.ttf";
 const start_tick = 0.125;
+const combo_scale = 1.5;
 
 pub fn main() !void {
     rl.setTargetFPS(60);
     rl.setConfigFlags(.{ .msaa_4x_hint = true, .vsync_hint = true });
-    rl.initWindow(grid_cols * cell_size, (grid_rows * cell_size) + (cell_size * 6), "snakagram");
+    rl.initWindow(win_width, win_height, "snakagram");
     defer rl.closeWindow();
 
     engine.render.setFont(rl.loadFontEx(font_path, cell_size * 2, null));
@@ -46,6 +50,8 @@ pub fn main() !void {
 
     var state = try State.init(&snake, &food_group, &grid, alloc);
 
+    const combo_fmt = "{d:>3} combo";
+
     while (!rl.windowShouldClose()) {
         engine.input.update();
         try state.update();
@@ -66,7 +72,6 @@ pub fn main() !void {
             cell_size,
             state.bgColor(),
         );
-        rl.drawFPS(grid_cols * cell_size - 32, 0);
         rl.drawTextEx(
             engine.render.getFont(),
             state.partialWord(),
@@ -78,5 +83,17 @@ pub fn main() !void {
             cell_size,
             state.fgColor(),
         );
+        rl.drawTextEx(
+            engine.render.getFont(),
+            try std.fmt.bufPrintZ(scratch.scratchBuf(combo_fmt.len), combo_fmt, .{state.combo}),
+            .{
+                .x = win_width - cell_size * 6,
+                .y = win_height - cell_size * 2,
+            },
+            cell_size,
+            1,
+            state.bgColor(),
+        );
+        // rl.drawFPS(grid_cols * cell_size - 32, 0);
     }
 }

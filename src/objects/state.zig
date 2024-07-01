@@ -31,6 +31,7 @@ const bg_colors = [_]Color{
 };
 
 const target_length = 5;
+const max_multiplier = 8;
 
 pub const State = struct {
     snake: *Snake,
@@ -40,6 +41,7 @@ pub const State = struct {
     partial_start_idx: usize,
     alloc: Allocator,
     color_idx: usize = 0,
+    combo: usize = 0,
 
     pub fn init(snake: *Snake, food_group: *FoodGroup, grid: *Grid, alloc: Allocator) !State {
         var state = State{
@@ -73,9 +75,11 @@ pub const State = struct {
         }
         if (new_food != null) {
             try self.snake.append(new_food.?.cell);
+            self.combo += 1;
             if (std.mem.eql(u8, self.partialWord(), self.target_word)) {
                 try self.finishWord(true);
             } else if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
+                self.combo = 0;
                 try self.finishWord(false);
             }
         }
