@@ -86,7 +86,7 @@ pub const Snake = struct {
         self._tail = self.parts.pop();
     }
 
-    pub fn add(self: *Snake, cell: Cell) !void {
+    pub fn append(self: *Snake, cell: Cell) !void {
         try self.parts.append(self._tail.?);
         try self.cells.append(cell);
     }

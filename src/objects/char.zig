@@ -26,6 +26,10 @@ pub const CharGroup = struct {
         self.chars.deinit();
     }
 
+    pub fn pop(self: *CharGroup, idx: usize) Char {
+        return self.chars.orderedRemove(idx);
+    }
+
     pub fn draw(self: *const CharGroup, grid: *Grid) void {
         for (self.chars.items) |*char| grid.setCell(char.coord, char.cell);
     }
