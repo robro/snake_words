@@ -14,36 +14,36 @@ pub const Food = struct {
 };
 
 pub const FoodGroup = struct {
-    food_list: ArrayList(Food),
+    food: ArrayList(Food),
 
-    pub fn init(text: [:0]const u8, color: rl.Color, grid: *Grid) !FoodGroup {
+    pub fn init(text: []const u8, color: rl.Color, grid: *Grid) !FoodGroup {
         var food_group = FoodGroup{
-            .food_list = ArrayList(Food).init(std.heap.page_allocator),
+            .food = ArrayList(Food).init(std.heap.page_allocator),
         };
         try food_group.spawnFood(text, color, grid);
         return food_group;
     }
 
     pub fn deinit(self: *FoodGroup) void {
-        self.food_list.deinit();
+        self.food.deinit();
     }
 
-    pub fn spawnFood(self: *FoodGroup, food_chars: [:0]const u8, color: rl.Color, grid: *Grid) !void {
-        try self.food_list.resize(food_chars.len);
+    pub fn spawnFood(self: *FoodGroup, food_chars: []const u8, color: rl.Color, grid: *Grid) !void {
+        try self.food.resize(food_chars.len);
         for (food_chars, 0..) |char, i| {
-            self.food_list.items[i] = .{
+            self.food.items[i] = .{
                 .cell = .{ .char = char, .color = color },
-                .coord = try grid.getFreeCoord('.', &std.heap.page_allocator),
+                .coord = try grid.getFreeCoord(),
             };
-            grid.setCell(self.food_list.items[i].cell, self.food_list.items[i].coord);
+            grid.setCell(self.food.items[i].cell, self.food.items[i].coord);
         }
     }
 
     pub fn pop(self: *FoodGroup, idx: usize) Food {
-        return self.food_list.orderedRemove(idx);
+        return self.food.orderedRemove(idx);
     }
 
-    pub fn draw(self: *const FoodGroup, grid: *Grid) void {
-        for (self.food_list.items) |*char| grid.setCell(char.cell, char.coord);
+    pub fn draw(self: *FoodGroup, grid: *Grid) void {
+        for (self.food.items) |*char| grid.setCell(char.cell, char.coord);
     }
 };

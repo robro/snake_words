@@ -1,4 +1,4 @@
-pub const words: []const [:0]const u8 = &.{
+pub const words: []const []const u8 = &.{
     "about",
     "other",
     "which",

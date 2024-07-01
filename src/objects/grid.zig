@@ -4,11 +4,13 @@ const rl = @import("raylib");
 const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
 
+const empty_char = '.';
+
 pub const Cell = struct {
     char: u8,
     color: rl.Color,
 
-    pub const empty_cell = Cell{ .char = '.', .color = rl.Color.dark_blue };
+    pub const empty_cell = Cell{ .char = empty_char, .color = rl.Color.gray };
 };
 
 pub const Grid = struct {
@@ -43,15 +45,15 @@ pub const Grid = struct {
         self.cells[@intFromFloat(coord.y)][@intFromFloat(coord.x)] = cell;
     }
 
-    pub fn getFreeCoord(self: *Grid, free_char: u8, alloc: *const Allocator) !Vector2 {
-        const coords = try alloc.alloc(Vector2, self.getRows() * self.getCols());
-        defer alloc.free(coords);
+    pub fn getFreeCoord(self: *Grid) !Vector2 {
+        const coords = try self.alloc.alloc(Vector2, self.getRows() * self.getCols());
+        defer self.alloc.free(coords);
 
         var i: usize = 0;
         for (self.cells, 0..) |*row, y| {
             for (row.*, 0..) |*cell, x| {
-                if (cell.char != free_char) continue;
-                coords[i] = Vector2{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
+                if (cell.char != empty_char) continue;
+                coords[i] = .{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
                 i += 1;
             }
         }

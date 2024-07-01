@@ -30,13 +30,13 @@ pub fn main() !void {
     defer grid.deinit();
     grid.fill(Cell.empty_cell);
 
-    var snake = try Snake.init("snake", rl.Color.red, 0.1, .{ .x = 5, .y = 5 }, .right, alloc);
+    var snake = try Snake.init("snake", rl.Color.ray_white, 0.1, .{ .x = 5, .y = 5 }, .right, alloc);
     defer snake.deinit();
 
-    var char_group = try FoodGroup.init(util.words[0], rl.Color.orange, &grid);
-    defer char_group.deinit();
+    var food_group = try FoodGroup.init(util.words[0], rl.Color.orange, &grid);
+    defer food_group.deinit();
 
-    var state = try State.init(&snake, &char_group, &grid, alloc);
+    var state = try State.init(&snake, &food_group, &grid, alloc);
 
     while (!rl.windowShouldClose()) {
         engine.input.update();
@@ -61,7 +61,7 @@ pub fn main() !void {
         rl.drawFPS(grid_cols * cell_size - 32, 0);
         rl.drawTextEx(
             engine.render.getFont(),
-            state.currWord(),
+            state.partialWord(),
             .{
                 .x = (grid_cols * cell_size / 2) - (cell_size * 2 * 2.5),
                 .y = grid_rows * cell_size + cell_size,

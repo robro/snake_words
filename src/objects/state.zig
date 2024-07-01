@@ -8,6 +8,7 @@ const Snake = @import("snake.zig").Snake;
 const Grid = @import("grid.zig").Grid;
 const Cell = @import("grid.zig").Cell;
 const FoodGroup = @import("food.zig").FoodGroup;
+const Food = @import("food.zig").Food;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
@@ -29,14 +30,14 @@ const bg_colors = [_]Color{
     Color.init(100, 20, 30, 255),
 };
 
-const word_length = 5;
+const target_length = 5;
 
 pub const State = struct {
     snake: *Snake,
     grid: *Grid,
     food_group: *FoodGroup,
     target_word: [:0]u8,
-    curr_word_idx: usize,
+    partial_start_idx: usize,
     alloc: Allocator,
     color_idx: usize = 0,
 
@@ -45,8 +46,8 @@ pub const State = struct {
             .snake = snake,
             .grid = grid,
             .food_group = food_group,
-            .target_word = try alloc.allocSentinel(u8, word_length, 0),
-            .curr_word_idx = snake.length(),
+            .target_word = try alloc.allocSentinel(u8, target_length, 0),
+            .partial_start_idx = snake.length(),
             .alloc = alloc,
         };
         state.newTarget();
@@ -59,54 +60,57 @@ pub const State = struct {
     }
 
     pub fn update(self: *State) !void {
-        self.grid.fill(.{ .char = '.', .color = self.bgColor() });
+        self.grid.fill(.{ .char = Cell.empty_cell.char, .color = self.bgColor() });
         self.snake.update();
         self.snake.draw(self.grid);
+        var new_food: ?Food = null;
 
-        for (self.food_group.food_list.items, 0..) |*char, i| {
-            if (self.snake.head().coord.equals(char.coord) == 0) {
-                continue;
+        for (self.food_group.food.items, 0..) |*food, i| {
+            if (self.snake.head().coord.equals(food.coord) == 1) {
+                new_food = self.food_group.pop(i);
+                break;
             }
-            const new_cell = self.food_group.pop(i).cell;
-            try self.snake.append(new_cell);
-
-            if (self.currWordLen() == word_length or
-                self.target_word[self.currWordLen() - 1] != new_cell.char)
-            {
-                if (self.currWordLen() < word_length) {
-                    for (self.snake.cells.items[self.curr_word_idx..]) |*cell| {
-                        cell.color = Color.gray;
-                    }
-                }
-                // TODO: Score the word
-                self.curr_word_idx = self.snake.length();
-                self.color_idx += 1;
-                self.color_idx %= fg_colors.len;
-                self.newTarget();
-                try self.food_group.spawnFood(
-                    self.target_word,
-                    self.fgColor(),
-                    self.grid,
-                );
+        }
+        if (new_food != null) {
+            try self.snake.append(new_food.?.cell);
+            if (std.mem.eql(u8, self.partialWord(), self.target_word)) {
+                try self.finishWord(true);
+            } else if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
+                try self.finishWord(false);
             }
-            break;
         }
         self.food_group.draw(self.grid);
     }
 
-    pub fn currWord(self: *State) [:0]u8 {
-        var buf = scratch.scratchBuf(self.currWordLen() + 1);
+    pub fn finishWord(self: *State, success: bool) !void {
+        const color = if (success) Color.ray_white else Color.dark_gray;
+        for (self.snake.cells.items[self.partial_start_idx..]) |*cell| {
+            cell.color = color;
+        }
+        self.partial_start_idx = self.snake.length();
+        self.color_idx += 1;
+        self.color_idx %= fg_colors.len;
+        self.newTarget();
+        try self.food_group.spawnFood(
+            self.target_word,
+            self.fgColor(),
+            self.grid,
+        );
+    }
+
+    pub fn partialWord(self: *State) [:0]u8 {
+        var buf = scratch.scratchBuf(self.partialLength() + 1);
         var idx: usize = 0;
-        for (self.snake.cells.items[self.curr_word_idx..]) |*cell| {
+        for (self.snake.cells.items[self.partial_start_idx..]) |*cell| {
             buf[idx] = cell.char;
             idx += 1;
         }
         buf[idx] = 0;
-        return @ptrCast(buf);
+        return buf[0..idx :0];
     }
 
-    pub fn currWordLen(self: *State) usize {
-        return self.snake.length() - self.curr_word_idx;
+    pub fn partialLength(self: *State) usize {
+        return self.snake.length() - self.partial_start_idx;
     }
 
     pub fn newTarget(self: *State) void {
