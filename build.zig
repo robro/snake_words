@@ -58,6 +58,9 @@ pub fn build(b: *std.Build) void {
     const util = b.addModule("util", .{
         .root_source_file = b.path("src/util/util.zig"),
     });
+    const scratch = b.addModule("scratch", .{
+        .root_source_file = b.path("src/scratch/scratch.zig"),
+    });
 
     exe.root_module.addImport("engine", engine);
     engine.addImport("raylib", raylib);
@@ -67,8 +70,10 @@ pub fn build(b: *std.Build) void {
     objects.addImport("raylib", raylib);
     objects.addImport("engine", engine);
     objects.addImport("util", util);
+    objects.addImport("scratch", scratch);
 
     exe.root_module.addImport("util", util);
+    exe.root_module.addImport("scratch", scratch);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
