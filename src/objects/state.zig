@@ -42,6 +42,8 @@ pub const State = struct {
     alloc: Allocator,
     color_idx: usize = 0,
     combo: usize = 0,
+    multiplier: usize = 1,
+    score: usize = 0,
 
     pub fn init(snake: *Snake, food_group: *FoodGroup, grid: *Grid, alloc: Allocator) !State {
         var state = State{
@@ -76,12 +78,16 @@ pub const State = struct {
         if (new_food != null) {
             try self.snake.append(new_food.?.cell);
             self.combo += 1;
+
             if (std.mem.eql(u8, self.partialWord(), self.target_word)) {
+                self.multiplier = @min(max_multiplier, self.multiplier * 2);
                 try self.finishWord(true);
             } else if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
                 self.combo = 0;
+                self.multiplier = 1;
                 try self.finishWord(false);
             }
+            self.score += self.multiplier * 10;
         }
         self.food_group.draw(self.grid);
     }
