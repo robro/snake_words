@@ -11,10 +11,11 @@ const Snake = objects.snake.Snake;
 const FoodGroup = objects.food.FoodGroup;
 const State = objects.state.State;
 
-const grid_rows = 16;
-const grid_cols = 16;
-const cell_size = 48;
+const grid_rows = 12;
+const grid_cols = 12;
+const cell_size = 64;
 const font_path = "resources/fonts/consola.ttf";
+const start_tick = 0.125;
 
 pub fn main() !void {
     rl.setTargetFPS(60);
@@ -30,7 +31,14 @@ pub fn main() !void {
     defer grid.deinit();
     grid.fill(Cell.empty_cell);
 
-    var snake = try Snake.init("snake", rl.Color.ray_white, 0.1, .{ .x = 5, .y = 5 }, .right, alloc);
+    var snake = try Snake.init(
+        "snake",
+        rl.Color.ray_white,
+        start_tick,
+        .{ .x = grid_cols - 5, .y = grid_rows / 2 },
+        .left,
+        alloc,
+    );
     defer snake.deinit();
 
     var food_group = try FoodGroup.init(util.words[0], rl.Color.orange, &grid);
@@ -51,7 +59,7 @@ pub fn main() !void {
             engine.render.getFont(),
             state.target_word,
             .{
-                .x = (grid_cols * cell_size / 2) - (cell_size * 2 * 2.5),
+                .x = (grid_cols * cell_size / 2) - (cell_size * 2 * 2.5) + (cell_size / 4),
                 .y = grid_rows * cell_size + cell_size,
             },
             cell_size * 2,
@@ -63,7 +71,7 @@ pub fn main() !void {
             engine.render.getFont(),
             state.partialWord(),
             .{
-                .x = (grid_cols * cell_size / 2) - (cell_size * 2 * 2.5),
+                .x = (grid_cols * cell_size / 2) - (cell_size * 2 * 2.5) + (cell_size / 4),
                 .y = grid_rows * cell_size + cell_size,
             },
             cell_size * 2,

@@ -15,8 +15,8 @@ pub fn renderGrid(grid: *Grid, position: Vector2, cell_size: usize) void {
                 getFont(),
                 &text,
                 position.add(.{
-                    .x = @floatFromInt(x * cell_size),
-                    .y = @floatFromInt(y * cell_size),
+                    .x = @floatFromInt(x * cell_size + cell_size / 4),
+                    .y = @floatFromInt(y * cell_size + cell_size / 4),
                 }),
                 @floatFromInt(cell_size),
                 0,
