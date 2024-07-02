@@ -45,6 +45,7 @@ pub const State = struct {
     score: usize = 0,
     game_state: GameState = .seeking,
     eval_time: usize = 1_000, // ms
+    gameover_time: usize = 1_500, // ms
 
     pub fn init(snake: *Snake, food_group: *FoodGroup, grid: *Grid, alloc: Allocator) !State {
         var state = State{
@@ -59,25 +60,56 @@ pub const State = struct {
         state.newTarget();
         try state.food_group.spawnFood(
             state.target_word,
-            colors[0][0],
+            state.fgColor(),
             grid,
         );
         return state;
     }
 
-    pub fn update(self: *State) !void {
+    pub fn reset(self: *State) !void {
+        self.snake.* = try Snake.init(
+            "snake",
+            Color.ray_white,
+            0.125,
+            .{ .x = 8, .y = 6 },
+            .left,
+            self.alloc,
+        );
+        self.food_group.* = try FoodGroup.init("", self.fgColor(), self.grid);
         self.grid.fill(.{ .char = Cell.empty_cell.char, .color = self.bgColor() });
-        self.food_group.update();
-        self.snake.update();
-        self.snake.draw(self.grid);
+        self.partial_start_idx = self.snake.length();
+        self.timer.reset();
+        self.color_idx += 1;
+        self.color_idx %= colors.len;
+        self.combo = 0;
+        self.multiplier = 1;
+        self.score = 0;
+        self.newTarget();
+        try self.food_group.spawnFood(
+            self.target_word,
+            self.fgColor(),
+            self.grid,
+        );
+        self.game_state = .seeking;
+    }
+
+    pub fn update(self: *State) !void {
+        self.snake.handleInput(rl.getKeyPressed());
         try switch (self.game_state) {
-            .seeking => self.updateSearch(),
+            .seeking => self.updateSeeking(),
             .evaluate => self.updateEval(),
             .gameover => self.updateGameover(),
         };
     }
 
-    fn updateSearch(self: *State) !void {
+    fn updateSeeking(self: *State) !void {
+        self.grid.fill(.{ .char = Cell.empty_cell.char, .color = self.bgColor() });
+        self.food_group.update();
+        self.snake.update();
+        if (self.snake.isColliding(self.grid)) {
+            self.game_state = .gameover;
+            self.timer.reset();
+        }
         var new_food: ?Food = null;
         for (self.food_group.food.items, 0..) |*food, i| {
             if (!self.food_group.edible) {
@@ -102,6 +134,7 @@ pub const State = struct {
             self.score += 10 * self.multiplier;
             self.timer.reset();
         }
+        self.snake.draw(self.grid);
         self.food_group.draw(self.grid);
     }
 
@@ -112,6 +145,9 @@ pub const State = struct {
     }
 
     fn updateEval(self: *State) !void {
+        self.grid.fill(.{ .char = Cell.empty_cell.char, .color = self.bgColor() });
+        self.snake.update();
+        self.snake.draw(self.grid);
         if (self.timer.read() < self.eval_time * std.time.ns_per_ms) {
             return;
         }
@@ -129,9 +165,11 @@ pub const State = struct {
         self.game_state = .seeking;
     }
 
-    fn updateGameover(self: *State) void {
-        // TODO: Implement losing and restarting
-        _ = self;
+    fn updateGameover(self: *State) !void {
+        if (self.timer.read() < self.gameover_time * std.time.ns_per_ms) {
+            return;
+        }
+        try self.reset();
     }
 
     fn setTailColor(self: *State, color: Color) void {

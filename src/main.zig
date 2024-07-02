@@ -52,7 +52,6 @@ pub fn main() !void {
     var state = try State.init(&snake, &food_group, &grid, alloc);
 
     while (!rl.windowShouldClose()) {
-        engine.input.update();
         try state.update();
 
         rl.beginDrawing();
