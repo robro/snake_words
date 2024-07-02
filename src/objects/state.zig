@@ -67,6 +67,7 @@ pub const State = struct {
 
     pub fn update(self: *State) !void {
         self.grid.fill(.{ .char = Cell.empty_cell.char, .color = self.bgColor() });
+        self.food_group.update();
         self.snake.update();
         self.snake.draw(self.grid);
         try switch (self.game_state) {
@@ -79,6 +80,9 @@ pub const State = struct {
     fn updateSearch(self: *State) !void {
         var new_food: ?Food = null;
         for (self.food_group.food.items, 0..) |*food, i| {
+            if (!self.food_group.edible) {
+                break;
+            }
             if (self.snake.head().coord.equals(food.coord) == 1) {
                 new_food = self.food_group.pop(i);
                 break;
@@ -121,6 +125,7 @@ pub const State = struct {
             self.fgColor(),
             self.grid,
         );
+        self.timer.reset();
         self.game_state = .seeking;
     }
 

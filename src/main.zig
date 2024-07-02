@@ -60,15 +60,24 @@ pub fn main() !void {
 
         rl.clearBackground(rl.Color.black);
         engine.render.renderGrid(&grid, rl.Vector2.zero(), cell_size);
-        try renderHUD(&state);
-        // rl.drawFPS(grid_cols * cell_size - 32, 0);
+        try renderHUD(&state, &food_group);
     }
 }
 
-fn renderHUD(state: *State) !void {
+fn renderHUD(state: *State, food_group: *FoodGroup) !void {
     const score_fmt = "{d:}";
     const combo_fmt = "{d:} combo";
     const multi_fmt = "x{d}";
+    const target_string = scratch.scratchBuf(6);
+
+    if (!food_group.edible) {
+        for (target_string) |*char| {
+            char.* = std.crypto.random.uintLessThan(u8, 26) + 97;
+        }
+    } else {
+        std.mem.copyForwards(u8, target_string, state.target_word);
+    }
+    target_string[5] = 0;
 
     rl.drawRectangle(
         0,
@@ -78,7 +87,7 @@ fn renderHUD(state: *State) !void {
         state.evalColor(),
     );
     engine.render.renderText(
-        state.target_word,
+        @ptrCast(target_string),
         .{
             .x = (win_width / 2) - (cell_size * 5) + (cell_size / 2),
             .y = (grid_rows * cell_size) + (cell_size / 2),
