@@ -12,22 +12,13 @@ const Food = @import("food.zig").Food;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
-const fg_colors = [_]Color{
-    Color.orange,
-    Color.green,
-    Color.purple,
-    Color.yellow,
-    Color.sky_blue,
-    Color.red,
-};
-
-const bg_colors = [_]Color{
-    Color.dark_brown,
-    Color.dark_green,
-    Color.dark_purple,
-    Color.dark_brown,
-    Color.dark_blue,
-    Color.init(100, 20, 30, 255),
+const colors = [_][2]Color{
+    .{ Color.orange, Color.dark_brown },
+    .{ Color.green, Color.dark_green },
+    .{ Color.purple, Color.dark_purple },
+    .{ Color.yellow, Color.dark_brown },
+    .{ Color.sky_blue, Color.dark_blue },
+    .{ Color.red, Color.init(100, 20, 30, 255) },
 };
 
 const target_length = 5;
@@ -57,7 +48,7 @@ pub const State = struct {
         state.newTarget();
         try state.food_group.spawnFood(
             state.target_word,
-            fg_colors[0],
+            colors[0][0],
             grid,
         );
         return state;
@@ -87,7 +78,7 @@ pub const State = struct {
                 self.multiplier = 1;
                 try self.finishWord(false);
             }
-            self.score += self.multiplier * 10;
+            self.score += 10 * self.multiplier;
         }
         self.food_group.draw(self.grid);
     }
@@ -99,7 +90,7 @@ pub const State = struct {
         }
         self.partial_start_idx = self.snake.length();
         self.color_idx += 1;
-        self.color_idx %= fg_colors.len;
+        self.color_idx %= colors.len;
         self.newTarget();
         try self.food_group.spawnFood(
             self.target_word,
@@ -132,11 +123,11 @@ pub const State = struct {
     }
 
     pub fn fgColor(self: *State) Color {
-        return fg_colors[self.color_idx];
+        return colors[self.color_idx][0];
     }
 
     pub fn bgColor(self: *State) Color {
-        return bg_colors[self.color_idx];
+        return colors[self.color_idx][1];
     }
 
     pub fn deinit(self: *State) void {
