@@ -51,10 +51,6 @@ pub fn main() !void {
 
     var state = try State.init(&snake, &food_group, &grid, alloc);
 
-    const score_fmt = "{d:}";
-    const combo_fmt = "{d:} combo";
-    const multi_fmt = "x{d}";
-
     while (!rl.windowShouldClose()) {
         engine.input.update();
         try state.update();
@@ -64,61 +60,81 @@ pub fn main() !void {
 
         rl.clearBackground(rl.Color.black);
         engine.render.renderGrid(&grid, rl.Vector2.zero(), cell_size);
-        rl.drawTextEx(
-            engine.render.getFont(),
-            state.target_word,
-            .{
-                .x = (grid_cols * cell_size / 2) - (cell_size * 2 * 2.5) + (cell_size / 4),
-                .y = grid_rows * cell_size + cell_size / 2,
-            },
-            cell_size * 2,
-            cell_size,
-            state.bgColor(),
-        );
-        rl.drawTextEx(
-            engine.render.getFont(),
-            state.partialWord(),
-            .{
-                .x = (grid_cols * cell_size / 2) - (cell_size * 2 * 2.5) + (cell_size / 4),
-                .y = grid_rows * cell_size + cell_size / 2,
-            },
-            cell_size * 2,
-            cell_size,
-            state.fgColor(),
-        );
-        rl.drawTextEx(
-            engine.render.getFont(),
-            try std.fmt.bufPrintZ(scratch.scratchBuf(16), score_fmt, .{state.score}),
-            .{
-                .x = cell_size,
-                .y = win_height - cell_size * 3,
-            },
-            cell_size * score_scale,
-            1,
-            state.bgColor(),
-        );
-        rl.drawTextEx(
-            engine.render.getFont(),
-            try std.fmt.bufPrintZ(scratch.scratchBuf(16), combo_fmt, .{state.combo}),
-            .{
-                .x = cell_size + cell_size / 8,
-                .y = win_height - cell_size * 1.5,
-            },
-            cell_size,
-            1,
-            state.bgColor(),
-        );
-        rl.drawTextEx(
-            engine.render.getFont(),
-            try std.fmt.bufPrintZ(scratch.scratchBuf(4), multi_fmt, .{state.multiplier}),
-            .{
-                .x = win_width - cell_size * 3,
-                .y = win_height - cell_size * 3,
-            },
-            cell_size * score_scale,
-            1,
-            state.bgColor(),
-        );
+        try renderHUD(&state);
         // rl.drawFPS(grid_cols * cell_size - 32, 0);
     }
+}
+
+fn renderHUD(state: *State) !void {
+    const score_fmt = "{d:}";
+    const combo_fmt = "{d:} combo";
+    const multi_fmt = "x{d}";
+
+    rl.drawRectangle(
+        0,
+        (grid_rows * cell_size) + (cell_size / 2),
+        win_width,
+        cell_size * 2,
+        state.evalColor(),
+    );
+    engine.render.renderText(
+        state.target_word,
+        .{
+            .x = (win_width / 2) - (cell_size * 5) + (cell_size / 2),
+            .y = (grid_rows * cell_size) + (cell_size / 2),
+        },
+        cell_size * 2,
+        cell_size * 2,
+        state.bgColor(),
+    );
+    engine.render.renderText(
+        state.partialWord(),
+        .{
+            .x = (win_width / 2) - (cell_size * 5) + (cell_size / 2),
+            .y = (grid_rows * cell_size) + (cell_size / 2),
+        },
+        cell_size * 2,
+        cell_size * 2,
+        state.partialColor(),
+    );
+    rl.drawRectangle(
+        @intFromFloat((win_width / 2) - (cell_size * 5) + (cell_size / 2) + (cell_size * 2 * @as(f32, @floatFromInt(state.partialLength())))),
+        (grid_rows * cell_size) + (cell_size / 2),
+        cell_size + 4,
+        cell_size * 2,
+        state.cursorColor(),
+    );
+    rl.drawTextEx(
+        engine.render.getFont(),
+        try std.fmt.bufPrintZ(scratch.scratchBuf(16), score_fmt, .{state.score}),
+        .{
+            .x = cell_size,
+            .y = win_height - cell_size * 3,
+        },
+        cell_size * score_scale,
+        1,
+        state.bgColor(),
+    );
+    rl.drawTextEx(
+        engine.render.getFont(),
+        try std.fmt.bufPrintZ(scratch.scratchBuf(16), combo_fmt, .{state.combo}),
+        .{
+            .x = cell_size + cell_size / 8,
+            .y = win_height - cell_size * 1.5,
+        },
+        cell_size,
+        1,
+        state.bgColor(),
+    );
+    rl.drawTextEx(
+        engine.render.getFont(),
+        try std.fmt.bufPrintZ(scratch.scratchBuf(4), multi_fmt, .{state.multiplier}),
+        .{
+            .x = win_width - cell_size * 3,
+            .y = win_height - cell_size * 3,
+        },
+        cell_size * score_scale,
+        1,
+        state.multiColor(),
+    );
 }
