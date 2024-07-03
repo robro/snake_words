@@ -102,6 +102,10 @@ pub const State = struct {
     }
 
     pub fn reset(self: *State) !void {
+        self.snake.deinit();
+        self.food_group.deinit();
+        self.grid.deinit();
+
         self.snake = try Snake.init(self.snake_options);
         self.food_group = try FoodGroup.init(self.food_group_options);
         self.grid = try Grid.init(self.grid_options);

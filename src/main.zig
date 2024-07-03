@@ -71,7 +71,12 @@ pub fn main() !void {
     setFont(.medium, rl.loadFontEx(font_path, font_size_medium, null));
     setFont(.large, rl.loadFontEx(font_path, font_size_large, null));
 
-    const alloc = std.heap.page_allocator;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const alloc = gpa.allocator();
+    defer {
+        const deinit_status = gpa.deinit();
+        if (deinit_status == .leak) @panic("gpa leaked!");
+    }
     const grid_options = GridOptions{
         .rows = grid_rows,
         .cols = grid_cols,
