@@ -74,6 +74,7 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("util", util);
     exe.root_module.addImport("scratch", scratch);
+    scratch.addImport("util", util);
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default

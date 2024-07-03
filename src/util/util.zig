@@ -1,5 +1,12 @@
 const std = @import("std");
 
+pub fn assert(ok: bool, comptime fmt: []const u8, args: anytype) void {
+    if (!ok) {
+        std.debug.print("assert failed: " ++ fmt ++ "\n", args);
+        unreachable;
+    }
+}
+
 pub fn randomChar() u8 {
     return std.crypto.random.uintLessThan(u8, 26) + 97;
 }
