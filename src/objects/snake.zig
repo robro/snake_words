@@ -9,16 +9,25 @@ const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
 const KeyboardKey = rl.KeyboardKey;
 
-const Facing = enum {
+pub const Facing = enum {
     up,
     down,
     left,
     right,
 };
 
-const Part = struct {
+pub const Part = struct {
     facing: Facing,
     coord: Vector2,
+};
+
+pub const SnakeOptions = struct {
+    text: [:0]const u8,
+    color: rl.Color,
+    tick: f64,
+    coord: Vector2,
+    facing: Facing,
+    alloc: Allocator,
 };
 
 pub const Snake = struct {
@@ -26,36 +35,27 @@ pub const Snake = struct {
     parts: ArrayList(Part),
     tick: f64,
 
-    _tail: ?Part = null,
-    _last_tick: f64 = 0,
+    tail: ?Part = null,
+    last_tick: f64 = 0,
 
-    pub fn init(
-        text: [:0]const u8,
-        color: rl.Color,
-        tick: f64,
-        coord: Vector2,
-        facing: Facing,
-        alloc: Allocator,
-    ) !Snake {
-        var cells = ArrayList(Cell).init(alloc);
-        try cells.resize(text.len);
-        var body = ArrayList(Part).init(alloc);
-        try body.resize(text.len);
+    pub fn init(options: SnakeOptions) !Snake {
+        var cells = ArrayList(Cell).init(options.alloc);
+        var parts = ArrayList(Part).init(options.alloc);
+        try cells.resize(options.text.len);
+        try parts.resize(options.text.len);
 
-        var offset: f32 = undefined;
-        for (body.items, 0..) |*part, i| {
-            cells.items[i] = .{ .char = text[i], .color = color };
-            offset = @floatFromInt(i);
-            part.facing = facing;
-            part.coord = coord;
-            switch (facing) {
-                .up => part.coord.y += offset,
-                .down => part.coord.y -= offset,
-                .left => part.coord.x += offset,
-                .right => part.coord.x -= offset,
+        for (parts.items, 0..) |*part, i| {
+            cells.items[i] = .{ .char = options.text[i], .color = options.color };
+            part.facing = options.facing;
+            part.coord = options.coord;
+            switch (part.facing) {
+                .up => part.coord.y += @as(f32, @floatFromInt(i)),
+                .down => part.coord.y -= @as(f32, @floatFromInt(i)),
+                .left => part.coord.x += @as(f32, @floatFromInt(i)),
+                .right => part.coord.x -= @as(f32, @floatFromInt(i)),
             }
         }
-        return Snake{ .cells = cells, .tick = tick, .parts = body };
+        return Snake{ .cells = cells, .parts = parts, .tick = options.tick };
     }
 
     pub fn deinit(self: *Snake) void {
@@ -63,9 +63,9 @@ pub const Snake = struct {
         self.parts.deinit();
     }
 
-    pub fn handleInput(self: *Snake, pressed: KeyboardKey) void {
+    pub fn update(self: *Snake) void {
         var facing = self.head().facing;
-        switch (pressed) {
+        switch (rl.getKeyPressed()) {
             .key_up => facing = if (facing != .down) .up else .down,
             .key_down => facing = if (facing != .up) .down else .up,
             .key_left => facing = if (facing != .right) .left else .right,
@@ -73,12 +73,10 @@ pub const Snake = struct {
             else => {},
         }
         self.head().facing = facing;
-    }
 
-    pub fn update(self: *Snake) void {
         const time = rl.getTime();
-        if (time < self._last_tick + self.tick) return;
-        self._last_tick = time;
+        if (time < self.last_tick + self.tick) return;
+        self.last_tick = time;
 
         var coord = self.head().coord;
         switch (self.head().facing) {
@@ -88,15 +86,15 @@ pub const Snake = struct {
             .right => coord.x += 1,
         }
         self.parts.insert(0, .{ .facing = self.head().facing, .coord = coord }) catch unreachable;
-        self._tail = self.parts.pop();
+        self.tail = self.parts.pop();
     }
 
     pub fn append(self: *Snake, cell: Cell) !void {
-        try self.parts.append(self._tail.?);
+        try self.parts.append(self.tail.?);
         try self.cells.append(cell);
     }
 
-    pub fn draw(self: *Snake, grid: *Grid) void {
+    pub fn drawToGrid(self: *Snake, grid: *Grid) void {
         for (self.parts.items, 0..) |*part, i| {
             grid.setCell(self.cells.items[i], part.coord);
         }

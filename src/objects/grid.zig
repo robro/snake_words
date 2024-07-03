@@ -3,34 +3,35 @@ const rl = @import("raylib");
 
 const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
-
-const empty_char = '.';
+const Color = rl.Color;
 
 pub const Cell = struct {
     char: u8,
     color: rl.Color,
+};
 
-    pub const empty_cell = Cell{ .char = empty_char, .color = rl.Color.gray };
+pub const GridOptions = struct {
+    rows: usize,
+    cols: usize,
+    empty_char: u8,
+    alloc: Allocator,
 };
 
 pub const Grid = struct {
     cells: [][]Cell,
+    empty_char: u8,
     alloc: Allocator,
 
-    pub fn getRows(self: *Grid) usize {
-        return self.cells.len;
-    }
-
-    pub fn getCols(self: *Grid) usize {
-        return self.cells[0].len;
-    }
-
-    pub fn init(rows: usize, cols: usize, alloc: Allocator) !Grid {
-        const cells = try alloc.alloc([]Cell, rows);
-        for (0..rows) |row| {
-            cells[row] = try alloc.alloc(Cell, cols);
+    pub fn init(options: GridOptions) !Grid {
+        const cells = try options.alloc.alloc([]Cell, options.rows);
+        for (0..options.rows) |row| {
+            cells[row] = try options.alloc.alloc(Cell, options.cols);
         }
-        return Grid{ .cells = cells, .alloc = alloc };
+        return Grid{
+            .cells = cells,
+            .empty_char = options.empty_char,
+            .alloc = options.alloc,
+        };
     }
 
     pub fn deinit(self: *Grid) void {
@@ -52,7 +53,7 @@ pub const Grid = struct {
         var i: usize = 0;
         for (self.cells, 0..) |*row, y| {
             for (row.*, 0..) |*cell, x| {
-                if (cell.char != empty_char) continue;
+                if (cell.char != self.empty_char) continue;
                 coords[i] = .{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
                 i += 1;
             }
@@ -61,9 +62,20 @@ pub const Grid = struct {
         return coords[std.crypto.random.uintLessThan(usize, i)];
     }
 
-    pub fn fill(self: *Grid, cell: Cell) void {
+    pub fn clear(self: *Grid, color: ?Color) void {
         for (self.cells) |row| {
-            for (row) |*c| c.* = cell;
+            for (row) |*c| c.* = .{
+                .char = self.empty_char,
+                .color = if (color == null) Color.blank else color.?,
+            };
         }
+    }
+
+    pub fn getRows(self: *Grid) usize {
+        return self.cells.len;
+    }
+
+    pub fn getCols(self: *Grid) usize {
+        return self.cells[0].len;
     }
 };
