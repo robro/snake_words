@@ -7,7 +7,7 @@ const Color = rl.Color;
 
 pub const Cell = struct {
     char: u8,
-    color: rl.Color,
+    color: Color,
 };
 
 pub const GridOptions = struct {

@@ -26,6 +26,7 @@ const renderGrid = engine.render.renderGrid;
 //  Add title screen
 //  ✅ Make font look better at different sizes
 //  ✅ Handle different sized words elegantly
+//  ✅ Fix scrambled letter regression
 
 const title = "snake_words";
 
@@ -120,10 +121,9 @@ fn renderHUD(state: *State) void {
     // Target word
     monoText(
         getFont(.large),
-        @ptrCast(state.target_word),
+        @ptrCast(state.targetDisplay()),
         .{
-            .x = (win_width / 2) - (target_width / 2) + (cell_size / 2) +
-                (@as(f32, @floatFromInt(state.target_word.len)) * cell_size * 2 - target_width) / 2,
+            .x = (win_width / 2) - (target_width / 2) + (cell_size / 2) + partial_width,
             .y = hud_y,
         },
         cell_size * 2,
@@ -145,8 +145,7 @@ fn renderHUD(state: *State) void {
         getFont(.large),
         @ptrCast(state.partialWord()),
         .{
-            .x = (win_width / 2) - (partial_width / 2) + (cell_size / 2) +
-                (@as(f32, @floatFromInt(state.partialLength())) * cell_size * 2 - target_width) / 2,
+            .x = (win_width / 2) - (target_width / 2) + (cell_size / 2),
             .y = hud_y,
         },
         cell_size * 2,
@@ -169,9 +168,7 @@ fn renderHUD(state: *State) void {
 
     // Terminal cursor
     rl.drawRectangle(
-        (win_width / 2) - @as(i32, @intFromFloat(partial_width / 2)) + (cell_size / 2) +
-            (@as(i32, @intCast(state.partialLength())) * cell_size * 3 -
-            @as(i32, @intFromFloat(target_width / 2))),
+        @as(i32, @intFromFloat((win_width / 2) - (target_width / 2) + (cell_size / 2) + (partial_width))),
         hud_y,
         cell_size + 4,
         cell_size * 2,

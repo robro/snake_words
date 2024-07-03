@@ -59,7 +59,7 @@ pub const State = struct {
     max_multiplier: usize = 8,
     eval_time: usize = 1_000, // ms
     gameover_time: usize = 1_000, // ms
-    gameover_text: []const u8 = "urded",
+    gameover_text: []const u8 = "udied",
 
     pub fn init(
         grid_options: GridOptions,
@@ -242,6 +242,14 @@ pub const State = struct {
         self.target_word = util.words[self.shuffled_indices[self.word_idx]];
         self.word_idx += 1;
         self.word_idx %= self.shuffled_indices.len;
+    }
+
+    pub fn targetDisplay(self: *State) []const u8 {
+        const buf = scratch.scratchBuf(self.food_group.size());
+        for (self.food_group.food.items, 0..) |*food, i| {
+            buf[i] = food.displayChar();
+        }
+        return buf;
     }
 
     pub fn fgColor(self: *State) Color {
