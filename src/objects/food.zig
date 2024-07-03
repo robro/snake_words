@@ -33,7 +33,7 @@ pub const Food = struct {
         return if (self.edible()) self.cell.char else util.randomChar();
     }
 
-    pub fn drawToGrid(self: *Food, grid: *Grid) void {
+    pub fn draw(self: *Food, grid: *Grid) void {
         grid.setCell(.{ .char = self.displayChar(), .color = self.cell.color }, self.coord);
     }
 };
@@ -63,7 +63,7 @@ pub const FoodGroup = struct {
     }
 
     pub fn draw(self: *FoodGroup, grid: *Grid) void {
-        for (self.food.items) |*food| food.drawToGrid(grid);
+        for (self.food.items) |*food| food.draw(grid);
     }
 
     pub fn pop(self: *FoodGroup, idx: usize) Food {
