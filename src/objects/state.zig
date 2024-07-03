@@ -40,11 +40,13 @@ pub const State = struct {
     snake_options: SnakeOptions,
     food_group_options: FoodGroupOptions,
 
+    word_indices: []usize,
     target_word: [:0]u8,
     partial_start_idx: usize,
     alloc: Allocator,
     timer: Timer,
 
+    word_idx: usize = 0,
     color_idx: usize = 0,
     combo: usize = 0,
     max_combo: usize = 0,
@@ -70,11 +72,16 @@ pub const State = struct {
             .grid_options = grid_options,
             .snake_options = snake_options,
             .food_group_options = food_group_options,
+            .word_indices = try alloc.alloc(usize, util.words.len),
             .target_word = try alloc.allocSentinel(u8, target_length, 0),
             .partial_start_idx = snake_options.text.len,
             .alloc = alloc,
             .timer = try Timer.start(),
         };
+        for (state.word_indices, 0..) |*idx, i| {
+            idx.* = i;
+        }
+        std.crypto.random.shuffle(usize, state.word_indices);
         state.newTarget();
         state.grid.clear(null);
         state.snake.drawToGrid(&state.grid);
@@ -100,6 +107,7 @@ pub const State = struct {
         self.partial_start_idx = self.snake.length();
         self.timer.reset();
 
+        self.word_idx = 0;
         self.color_idx += 1;
         self.color_idx %= colors.len;
         self.combo = 0;
@@ -107,6 +115,7 @@ pub const State = struct {
         self.multiplier = 1;
         self.score = 0;
 
+        std.crypto.random.shuffle(usize, self.word_indices);
         self.newTarget();
         self.grid.clear(null);
         self.snake.drawToGrid(&self.grid);
@@ -227,11 +236,9 @@ pub const State = struct {
     }
 
     pub fn newTarget(self: *State) void {
-        std.mem.copyForwards(
-            u8,
-            self.target_word,
-            util.words[std.crypto.random.uintLessThan(usize, util.words.len)],
-        );
+        std.mem.copyForwards(u8, self.target_word, util.words[self.word_indices[self.word_idx]]);
+        self.word_idx += 1;
+        self.word_idx %= self.word_indices.len;
     }
 
     pub fn fgColor(self: *State) Color {
