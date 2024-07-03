@@ -142,8 +142,7 @@ pub const State = struct {
     }
 
     fn seeking(self: *State) !void {
-        try self.input_queue.add(rl.getKeyPressed());
-        self.updateAndColide();
+        try self.updateAndColide();
         for (self.food_group.food.items, 0..) |*food, i| {
             if (!food.edible() or self.snake.head().coord.equals(food.coord) == 0) {
                 continue;
@@ -170,8 +169,7 @@ pub const State = struct {
     }
 
     fn evaluate(self: *State) !void {
-        try self.input_queue.add(rl.getKeyPressed());
-        self.updateAndColide();
+        try self.updateAndColide();
         self.snake.drawToGrid(&self.grid);
         if (self.timer.read() < eval_time * std.time.ns_per_ms or self.game_state == .gameover) {
             return;
@@ -210,7 +208,8 @@ pub const State = struct {
         try self.reset();
     }
 
-    fn updateAndColide(self: *State) void {
+    fn updateAndColide(self: *State) !void {
+        try self.input_queue.add(rl.getKeyPressed());
         self.snake.update(&self.input_queue);
         self.grid.clear(self.bgColor());
         if (self.snake.isColliding(&self.grid)) {
