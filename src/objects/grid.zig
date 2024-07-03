@@ -62,12 +62,14 @@ pub const Grid = struct {
         return coords[std.crypto.random.uintLessThan(usize, i)];
     }
 
-    pub fn clear(self: *Grid, color: ?Color) void {
-        for (self.cells) |row| {
-            for (row) |*c| c.* = .{
-                .char = self.empty_char,
-                .color = if (color == null) Color.blank else color.?,
-            };
+    pub fn fill(self: *Grid, cell: ?Cell) void {
+        for (self.cells) |*row| {
+            for (row.*) |*c| {
+                c.* = if (cell == null) .{
+                    .char = self.empty_char,
+                    .color = Color.blank,
+                } else cell.?;
+            }
         }
     }
 

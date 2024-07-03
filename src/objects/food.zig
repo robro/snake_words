@@ -53,18 +53,16 @@ pub const FoodGroup = struct {
         self.food.deinit();
     }
 
-    pub fn spawnFood(self: *FoodGroup, food_chars: []const u8, color: Color, grid: *Grid) !void {
-        try self.food.resize(food_chars.len);
-        for (self.food.items, 0..) |*food, i| {
-            food.* = try Food.init(
-                .{ .char = food_chars[i], .color = color },
-                try grid.getFreeCoord(),
-            );
-            grid.setCell(food.cell, food.coord);
+    pub fn spawnFood(self: *FoodGroup, chars: []const u8, color: Color, grid: *Grid) !void {
+        for (chars) |char| {
+            const cell: Cell = .{ .char = char, .color = color };
+            const coord: Vector2 = try grid.getFreeCoord();
+            try self.food.append(try Food.init(cell, coord));
+            grid.setCell(cell, coord);
         }
     }
 
-    pub fn drawToGrid(self: *FoodGroup, grid: *Grid) void {
+    pub fn draw(self: *FoodGroup, grid: *Grid) void {
         for (self.food.items) |*food| food.drawToGrid(grid);
     }
 
@@ -74,5 +72,9 @@ pub const FoodGroup = struct {
 
     pub fn size(self: *FoodGroup) usize {
         return self.food.items.len;
+    }
+
+    pub fn clear(self: *FoodGroup) void {
+        self.food.clearAndFree();
     }
 };

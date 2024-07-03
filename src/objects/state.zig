@@ -43,7 +43,7 @@ pub const State = struct {
     food_group_options: FoodGroupOptions,
 
     shuffled_indices: []usize,
-    partial_start_idx: usize,
+    partial_idx: usize,
     alloc: Allocator,
     timer: Timer,
     input_queue: InputQueue,
@@ -75,16 +75,16 @@ pub const State = struct {
             .snake_options = snake_options,
             .food_group_options = food_group_options,
             .shuffled_indices = try alloc.alloc(usize, util.words.len),
-            .partial_start_idx = snake_options.text.len,
+            .partial_idx = snake_options.text.len,
             .alloc = alloc,
             .timer = try Timer.start(),
             .input_queue = InputQueue.init(alloc),
         };
         for (state.shuffled_indices, 0..) |*idx, i| idx.* = i;
         std.crypto.random.shuffle(usize, state.shuffled_indices);
-        state.newTarget();
-        state.grid.clear(null);
-        state.snake.drawToGrid(&state.grid);
+        state.newTargetWord();
+        state.grid.fill(null);
+        state.snake.draw(&state.grid);
         try state.food_group.spawnFood(
             state.target_word,
             state.fgColor(),
@@ -109,9 +109,9 @@ pub const State = struct {
         self.snake = try Snake.init(self.snake_options);
         self.food_group = try FoodGroup.init(self.food_group_options);
         self.grid = try Grid.init(self.grid_options);
-        self.partial_start_idx = self.snake.length();
+        self.partial_idx = self.snake.length();
         self.timer.reset();
-        try self.input_queue.clear();
+        self.input_queue.clear();
 
         self.word_idx = 0;
         self.color_idx += 1;
@@ -122,9 +122,9 @@ pub const State = struct {
         self.score = 0;
 
         std.crypto.random.shuffle(usize, self.shuffled_indices);
-        self.newTarget();
-        self.grid.clear(null);
-        self.snake.drawToGrid(&self.grid);
+        self.newTargetWord();
+        self.grid.fill(null);
+        self.snake.draw(&self.grid);
         try self.food_group.spawnFood(
             self.target_word,
             self.fgColor(),
@@ -142,7 +142,7 @@ pub const State = struct {
     }
 
     fn seeking(self: *State) !void {
-        try self.updateAndColide();
+        try self.updateAndCollide();
         for (self.food_group.food.items, 0..) |*food, i| {
             if (!food.edible() or self.snake.head().coord.equals(food.coord) == 0) {
                 continue;
@@ -164,21 +164,22 @@ pub const State = struct {
             self.timer.reset();
             break;
         }
-        self.snake.drawToGrid(&self.grid);
-        self.food_group.drawToGrid(&self.grid);
+        self.snake.draw(&self.grid);
+        self.food_group.draw(&self.grid);
     }
 
     fn evaluate(self: *State) !void {
-        try self.updateAndColide();
-        self.snake.drawToGrid(&self.grid);
+        if (self.food_group.size() != 0) self.food_group.clear();
+        try self.updateAndCollide();
+        self.snake.draw(&self.grid);
         if (self.timer.read() < self.eval_time * std.time.ns_per_ms or self.game_state == .gameover) {
             return;
         }
         self.setTailColor(if (self.combo > 0) Color.ray_white else Color.gray);
-        self.partial_start_idx = self.snake.length();
+        self.partial_idx = self.snake.length();
         self.color_idx += 1;
         self.color_idx %= colors.len;
-        self.newTarget();
+        self.newTargetWord();
         try self.food_group.spawnFood(
             self.target_word,
             self.fgColor(),
@@ -189,6 +190,7 @@ pub const State = struct {
     }
 
     fn gameover(self: *State) !void {
+        self.grid.fill(null);
         self.combo = self.max_combo;
         for (self.food_group.food.items) |*food| {
             food.cell.char = util.randomChar();
@@ -196,9 +198,9 @@ pub const State = struct {
         for (self.snake.cells.items) |*cell| {
             cell.char = util.randomChar();
         }
-        self.grid.clear(null);
-        self.snake.drawToGrid(&self.grid);
-        self.food_group.drawToGrid(&self.grid);
+        self.grid.fill(null);
+        self.snake.draw(&self.grid);
+        self.food_group.draw(&self.grid);
         if (self.timer.read() < self.gameover_time * std.time.ns_per_ms) {
             return;
         }
@@ -208,35 +210,35 @@ pub const State = struct {
         try self.reset();
     }
 
-    fn updateAndColide(self: *State) !void {
+    fn updateAndCollide(self: *State) !void {
         try self.input_queue.add(rl.getKeyPressed());
+        self.grid.fill(.{ .char = self.grid.empty_char, .color = self.bgColor() });
         self.snake.update(&self.input_queue);
-        self.grid.clear(self.bgColor());
-        if (self.snake.isColliding(&self.grid)) {
+        if (self.snake.colliding(&self.grid)) {
             self.timer.reset();
             self.game_state = .gameover;
         }
     }
 
     fn setTailColor(self: *State, color: Color) void {
-        for (self.snake.cells.items[self.partial_start_idx..]) |*cell| {
+        for (self.snake.cells.items[self.partial_idx..]) |*cell| {
             cell.color = color;
         }
     }
 
     pub fn partialLength(self: *State) usize {
-        return self.snake.length() - self.partial_start_idx;
+        return self.snake.length() - self.partial_idx;
     }
 
     pub fn partialWord(self: *State) []const u8 {
         var buf = scratch.scratchBuf(self.partialLength());
-        for (self.snake.cells.items[self.partial_start_idx..], 0..) |*cell, i| {
+        for (self.snake.cells.items[self.partial_idx..], 0..) |*cell, i| {
             buf[i] = cell.char;
         }
         return buf;
     }
 
-    pub fn newTarget(self: *State) void {
+    pub fn newTargetWord(self: *State) void {
         self.target_word = util.words[self.shuffled_indices[self.word_idx]];
         self.word_idx += 1;
         self.word_idx %= self.shuffled_indices.len;

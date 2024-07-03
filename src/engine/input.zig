@@ -28,7 +28,7 @@ pub const InputQueue = struct {
         return self.queue.orderedRemove(0);
     }
 
-    pub fn clear(self: *InputQueue) !void {
-        try self.queue.resize(0);
+    pub fn clear(self: *InputQueue) void {
+        self.queue.clearAndFree();
     }
 };

@@ -93,13 +93,13 @@ pub const Snake = struct {
         try self.cells.append(cell);
     }
 
-    pub fn drawToGrid(self: *Snake, grid: *Grid) void {
+    pub fn draw(self: *Snake, grid: *Grid) void {
         for (self.parts.items, 0..) |*part, i| {
             grid.setCell(self.cells.items[i], part.coord);
         }
     }
 
-    pub fn isColliding(self: *Snake, grid: *Grid) bool {
+    pub fn colliding(self: *Snake, grid: *Grid) bool {
         if (self.x() < 0 or self.x() >= @as(f32, @floatFromInt(grid.getCols())) or
             self.y() < 0 or self.y() >= @as(f32, @floatFromInt(grid.getRows())))
         {
