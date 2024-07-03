@@ -14,7 +14,7 @@ const SnakeOptions = objects.snake.SnakeOptions;
 const FoodGroupOptions = objects.food.FoodGroupOptions;
 const State = objects.state.State;
 
-const game_name = "snake_words";
+const title = "snake_words";
 
 // Dimensions
 const grid_rows = 12;
@@ -41,7 +41,7 @@ const multi_fmt = "x{d}";
 const snake_text = "snake";
 const snake_color = Color.ray_white;
 const snake_tick = 0.125;
-const snake_coord = Vector2{ .x = grid_cols - 5, .y = grid_rows / 2 };
+const snake_coord = Vector2{ .x = grid_cols - 4, .y = grid_rows / 2 };
 const snake_facing = Facing.left;
 
 // Misc
@@ -51,7 +51,7 @@ const fps = 60;
 
 pub fn main() !void {
     rl.setConfigFlags(.{ .msaa_4x_hint = true, .vsync_hint = true });
-    rl.initWindow(win_width, win_height, game_name);
+    rl.initWindow(win_width, win_height, title);
     defer rl.closeWindow();
 
     const alloc = std.heap.page_allocator;

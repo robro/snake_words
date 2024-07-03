@@ -1,6 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const engine = @import("engine");
+const util = @import("util");
 
 const Grid = @import("grid.zig").Grid;
 const Cell = @import("grid.zig").Cell;
@@ -29,7 +30,7 @@ pub const Food = struct {
     }
 
     pub fn displayChar(self: *Food) u8 {
-        return if (self.edible()) self.cell.char else std.crypto.random.uintLessThan(u8, 26) + 97;
+        return if (self.edible()) self.cell.char else util.randomChar();
     }
 
     pub fn drawToGrid(self: *Food, grid: *Grid) void {

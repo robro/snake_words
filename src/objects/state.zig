@@ -118,13 +118,13 @@ pub const State = struct {
 
     pub fn update(self: *State) !void {
         try switch (self.game_state) {
-            .seeking => self.updateSeeking(),
-            .evaluate => self.updateEvaluate(),
-            .gameover => self.updateGameover(),
+            .seeking => self.seeking(),
+            .evaluate => self.evaluate(),
+            .gameover => self.gameover(),
         };
     }
 
-    fn updateSeeking(self: *State) !void {
+    fn seeking(self: *State) !void {
         self.updateAndColide();
         for (self.food_group.food.items, 0..) |*food, i| {
             if (food.edible() and self.snake.head().coord.equals(food.coord) == 1) {
@@ -149,7 +149,7 @@ pub const State = struct {
         self.food_group.drawToGrid(&self.grid);
     }
 
-    fn updateEvaluate(self: *State) !void {
+    fn evaluate(self: *State) !void {
         self.updateAndColide();
         self.snake.drawToGrid(&self.grid);
         if (self.timer.read() < eval_time * std.time.ns_per_ms or self.game_state == .gameover) {
@@ -169,7 +169,16 @@ pub const State = struct {
         self.game_state = .seeking;
     }
 
-    fn updateGameover(self: *State) !void {
+    fn gameover(self: *State) !void {
+        for (self.food_group.food.items) |*food| {
+            food.cell.char = util.randomChar();
+        }
+        for (self.snake.cells.items) |*cell| {
+            cell.char = util.randomChar();
+        }
+        self.grid.clear(null);
+        self.snake.drawToGrid(&self.grid);
+        self.food_group.drawToGrid(&self.grid);
         if (self.timer.read() < gameover_time * std.time.ns_per_ms) {
             return;
         }
@@ -195,6 +204,9 @@ pub const State = struct {
     }
 
     pub fn partialWord(self: *State) [:0]u8 {
+        if (self.game_state == .gameover) {
+            return @constCast("urded");
+        }
         var buf = scratch.scratchBuf(self.partialLength() + 1);
         var idx: usize = 0;
         for (self.snake.cells.items[self.partial_start_idx..]) |*cell| {
@@ -234,6 +246,7 @@ pub const State = struct {
                     return Color.blank;
                 }
             },
+            .gameover => return if (self.blinking()) Color.black else Color.blank,
             else => return self.fgColor(),
         }
     }
@@ -255,6 +268,7 @@ pub const State = struct {
     pub fn evaluateColor(self: *State) Color {
         switch (self.game_state) {
             .evaluate => return if (self.combo == 0) self.bgColor() else Color.blank,
+            .gameover => return self.bgColor(),
             else => return Color.blank,
         }
     }

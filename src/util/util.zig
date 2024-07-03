@@ -1,3 +1,9 @@
+const std = @import("std");
+
+pub fn randomChar() u8 {
+    return std.crypto.random.uintLessThan(u8, 26) + 97;
+}
+
 pub const words: []const []const u8 = &.{
     "about",
     "other",
