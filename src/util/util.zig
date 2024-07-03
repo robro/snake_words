@@ -12,6 +12,7 @@ pub fn randomChar() u8 {
 }
 
 pub const words: []const []const u8 = &.{
+    "viral",
     "album",
     "virus",
     "event",

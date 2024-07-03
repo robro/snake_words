@@ -13,6 +13,19 @@ const GridOptions = objects.grid.GridOptions;
 const SnakeOptions = objects.snake.SnakeOptions;
 const FoodGroupOptions = objects.food.FoodGroupOptions;
 const State = objects.state.State;
+const FontSize = engine.render.FontSize;
+
+const setFont = engine.render.setFont;
+const getFont = engine.render.getFont;
+const monoText = engine.render.monoText;
+const renderGrid = engine.render.renderGrid;
+
+// TODO:
+//  Handle different sized words elegantly
+//  ✅ Make font look better at different sizes
+//  Make score tally up (tween)
+//  Add visual flair to grid action
+//  Add title screen
 
 const title = "snake_words";
 
@@ -27,9 +40,9 @@ const win_height = grid_height + (cell_size * 6);
 const hud_y = grid_height + (cell_size / 2);
 
 // Font
-const font_size = 64;
-const font_size_medium = font_size * 1.5;
-const font_size_large = font_size * 2;
+const font_size_small = 64;
+const font_size_medium = font_size_small * 1.5;
+const font_size_large = font_size_small * 2;
 const font_path = "resources/fonts/consola.ttf";
 
 // HUD formatting
@@ -54,6 +67,10 @@ pub fn main() !void {
     rl.initWindow(win_width, win_height, title);
     defer rl.closeWindow();
 
+    setFont(.small, rl.loadFontEx(font_path, font_size_small, null));
+    setFont(.medium, rl.loadFontEx(font_path, font_size_medium, null));
+    setFont(.large, rl.loadFontEx(font_path, font_size_large, null));
+
     const alloc = std.heap.page_allocator;
     const grid_options = GridOptions{
         .rows = grid_rows,
@@ -76,7 +93,6 @@ pub fn main() !void {
     var state = try State.init(grid_options, snake_options, food_group_options, alloc);
     defer state.deinit();
 
-    engine.render.setFont(rl.loadFontEx(font_path, font_size_large, null));
     rl.setTargetFPS(fps);
 
     while (!rl.windowShouldClose()) {
@@ -86,7 +102,7 @@ pub fn main() !void {
         defer rl.endDrawing();
 
         rl.clearBackground(bg_color);
-        engine.render.renderGrid(&state.grid, rl.Vector2.zero(), cell_size);
+        renderGrid(&state.grid, rl.Vector2.zero(), cell_size, .small);
         renderHUD(&state);
     }
 }
@@ -99,15 +115,16 @@ fn renderHUD(state: *State) void {
     }
 
     // Target word
-    engine.render.renderText(
+    monoText(
+        getFont(.large),
         @ptrCast(target_letters),
         .{
             .x = (win_width / 2) - (target_width / 2) + (cell_size / 2) +
                 (@as(f32, @floatFromInt(state.target_word.len)) * font_size_large - target_width) / 2,
             .y = hud_y,
         },
-        font_size_large,
-        font_size_large,
+        cell_size * 2,
+        cell_size * 2,
         state.bgColor(),
     );
 
@@ -121,7 +138,8 @@ fn renderHUD(state: *State) void {
     );
 
     // Partial word
-    engine.render.renderText(
+    monoText(
+        getFont(.large),
         state.partialWord(),
         .{
             .x = (win_width / 2) - (cell_size * 5) + (cell_size / 2),
@@ -144,40 +162,40 @@ fn renderHUD(state: *State) void {
 
     // Score
     rl.drawTextEx(
-        engine.render.getFont(),
+        getFont(.medium),
         std.fmt.bufPrintZ(scratch.scratchBuf(16), score_fmt, .{state.score}) catch unreachable,
         .{
             .x = cell_size,
             .y = win_height - cell_size * 3,
         },
         font_size_medium,
-        1,
+        2,
         state.bgColor(),
     );
 
     // Combo
     rl.drawTextEx(
-        engine.render.getFont(),
+        getFont(.small),
         std.fmt.bufPrintZ(scratch.scratchBuf(16), combo_fmt, .{state.combo}) catch unreachable,
         .{
             .x = cell_size + cell_size / 8,
             .y = win_height - cell_size * 1.5,
         },
-        font_size,
-        1,
+        font_size_small,
+        2,
         state.bgColor(),
     );
 
     // Multiplier
     rl.drawTextEx(
-        engine.render.getFont(),
+        getFont(.medium),
         std.fmt.bufPrintZ(scratch.scratchBuf(3), multi_fmt, .{state.multiplier}) catch unreachable,
         .{
             .x = win_width - cell_size * 3,
             .y = win_height - cell_size * 3,
         },
         font_size_medium,
-        1,
+        2,
         state.multiplierColor(),
     );
 }
