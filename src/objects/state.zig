@@ -2,6 +2,7 @@ const std = @import("std");
 const rl = @import("raylib");
 const util = @import("util");
 const scratch = @import("scratch");
+const engine = @import("engine");
 
 const Color = rl.Color;
 const Snake = @import("snake.zig").Snake;
@@ -15,6 +16,7 @@ const Food = @import("food.zig").Food;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const Timer = std.time.Timer;
+const InputQueue = engine.input.InputQueue;
 
 const GameState = enum {
     seeking,
@@ -45,6 +47,7 @@ pub const State = struct {
     partial_start_idx: usize,
     alloc: Allocator,
     timer: Timer,
+    input_queue: InputQueue,
 
     word_idx: usize = 0,
     color_idx: usize = 0,
@@ -77,6 +80,7 @@ pub const State = struct {
             .partial_start_idx = snake_options.text.len,
             .alloc = alloc,
             .timer = try Timer.start(),
+            .input_queue = InputQueue.init(alloc),
         };
         for (state.word_indices, 0..) |*idx, i| {
             idx.* = i;
@@ -98,6 +102,7 @@ pub const State = struct {
         self.snake.deinit();
         self.food_group.deinit();
         self.grid.deinit();
+        self.input_queue.deinit();
     }
 
     pub fn reset(self: *State) !void {
@@ -106,6 +111,7 @@ pub const State = struct {
         self.grid = try Grid.init(self.grid_options);
         self.partial_start_idx = self.snake.length();
         self.timer.reset();
+        try self.input_queue.clear();
 
         self.word_idx = 0;
         self.color_idx += 1;
@@ -136,6 +142,7 @@ pub const State = struct {
     }
 
     fn seeking(self: *State) !void {
+        try self.input_queue.add(rl.getKeyPressed());
         self.updateAndColide();
         for (self.food_group.food.items, 0..) |*food, i| {
             if (!food.edible() or self.snake.head().coord.equals(food.coord) == 0) {
@@ -163,6 +170,7 @@ pub const State = struct {
     }
 
     fn evaluate(self: *State) !void {
+        try self.input_queue.add(rl.getKeyPressed());
         self.updateAndColide();
         self.snake.drawToGrid(&self.grid);
         if (self.timer.read() < eval_time * std.time.ns_per_ms or self.game_state == .gameover) {
@@ -203,7 +211,7 @@ pub const State = struct {
     }
 
     fn updateAndColide(self: *State) void {
-        self.snake.update();
+        self.snake.update(&self.input_queue);
         self.grid.clear(self.bgColor());
         if (self.snake.isColliding(&self.grid)) {
             self.timer.reset();

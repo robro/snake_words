@@ -7,6 +7,7 @@ const Cell = @import("grid.zig").Cell;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
+const InputQueue = engine.input.InputQueue;
 
 pub const Facing = enum {
     up,
@@ -63,20 +64,19 @@ pub const Snake = struct {
         self.parts.deinit();
     }
 
-    pub fn update(self: *Snake) void {
+    pub fn update(self: *Snake, input_queue: *InputQueue) void {
+        const time = rl.getTime();
+        if (time < self.last_tick + self.tick) return;
+        self.last_tick = time;
+
         if (self.facing == null) self.facing = self.head().facing;
-        switch (rl.getKeyPressed()) {
+        switch (input_queue.pop()) {
             .key_up => self.facing = if (self.head().facing != .down) .up else self.facing,
             .key_down => self.facing = if (self.head().facing != .up) .down else self.facing,
             .key_left => self.facing = if (self.head().facing != .right) .left else self.facing,
             .key_right => self.facing = if (self.head().facing != .left) .right else self.facing,
             else => {},
         }
-
-        const time = rl.getTime();
-        if (time < self.last_tick + self.tick) return;
-        self.last_tick = time;
-
         var coord = self.head().coord;
         switch (self.facing.?) {
             .up => coord.y -= 1,
