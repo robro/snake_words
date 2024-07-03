@@ -7,7 +7,6 @@ const Cell = @import("grid.zig").Cell;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
-const KeyboardKey = rl.KeyboardKey;
 
 pub const Facing = enum {
     up,

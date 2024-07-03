@@ -47,6 +47,7 @@ pub const State = struct {
 
     color_idx: usize = 0,
     combo: usize = 0,
+    max_combo: usize = 0,
     multiplier: usize = 1,
     score: usize = 0,
     game_state: GameState = .seeking,
@@ -102,6 +103,7 @@ pub const State = struct {
         self.color_idx += 1;
         self.color_idx %= colors.len;
         self.combo = 0;
+        self.max_combo = 0;
         self.multiplier = 1;
         self.score = 0;
 
@@ -127,23 +129,25 @@ pub const State = struct {
     fn seeking(self: *State) !void {
         self.updateAndColide();
         for (self.food_group.food.items, 0..) |*food, i| {
-            if (food.edible() and self.snake.head().coord.equals(food.coord) == 1) {
-                try self.snake.append(self.food_group.pop(i).cell);
-                self.combo += 1;
-                if (std.mem.eql(u8, self.target_word, self.partialWord())) {
-                    self.multiplier = @min(max_multiplier, self.multiplier * 2);
-                    self.timer.reset();
-                    self.game_state = .evaluate;
-                } else if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
-                    self.combo = 0;
-                    self.multiplier = 1;
-                    self.timer.reset();
-                    self.game_state = .evaluate;
-                }
-                self.score += 10 * self.multiplier;
-                self.timer.reset();
-                break;
+            if (!food.edible() or self.snake.head().coord.equals(food.coord) == 0) {
+                continue;
             }
+            try self.snake.append(self.food_group.pop(i).cell);
+            self.combo += 1;
+            if (std.mem.eql(u8, self.target_word, self.partialWord())) {
+                self.multiplier = @min(max_multiplier, self.multiplier * 2);
+                self.score += 10 * self.multiplier;
+                self.game_state = .evaluate;
+            } else if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
+                self.combo = 0;
+                self.multiplier = 1;
+                self.game_state = .evaluate;
+            } else {
+                self.score += 10 * self.multiplier;
+            }
+            self.max_combo = @max(self.max_combo, self.combo);
+            self.timer.reset();
+            break;
         }
         self.snake.drawToGrid(&self.grid);
         self.food_group.drawToGrid(&self.grid);
@@ -170,6 +174,7 @@ pub const State = struct {
     }
 
     fn gameover(self: *State) !void {
+        self.combo = self.max_combo;
         for (self.food_group.food.items) |*food| {
             food.cell.char = util.randomChar();
         }
