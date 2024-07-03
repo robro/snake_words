@@ -42,8 +42,7 @@ pub const State = struct {
     snake_options: SnakeOptions,
     food_group_options: FoodGroupOptions,
 
-    word_indices: []usize,
-    target_word: [:0]u8,
+    shuffled_indices: []usize,
     partial_start_idx: usize,
     alloc: Allocator,
     timer: Timer,
@@ -56,11 +55,11 @@ pub const State = struct {
     multiplier: usize = 1,
     score: usize = 0,
     game_state: GameState = .seeking,
-
-    const target_length = 5;
-    const max_multiplier = 8;
-    const eval_time: usize = 1_000; // ms
-    const gameover_time: usize = 1_000; // ms
+    target_word: []const u8 = undefined,
+    max_multiplier: usize = 8,
+    eval_time: usize = 1_000, // ms
+    gameover_time: usize = 1_000, // ms
+    gameover_text: []const u8 = "urded",
 
     pub fn init(
         grid_options: GridOptions,
@@ -75,17 +74,14 @@ pub const State = struct {
             .grid_options = grid_options,
             .snake_options = snake_options,
             .food_group_options = food_group_options,
-            .word_indices = try alloc.alloc(usize, util.words.len),
-            .target_word = try alloc.allocSentinel(u8, target_length, 0),
+            .shuffled_indices = try alloc.alloc(usize, util.words.len),
             .partial_start_idx = snake_options.text.len,
             .alloc = alloc,
             .timer = try Timer.start(),
             .input_queue = InputQueue.init(alloc),
         };
-        for (state.word_indices, 0..) |*idx, i| {
-            idx.* = i;
-        }
-        std.crypto.random.shuffle(usize, state.word_indices);
+        for (state.shuffled_indices, 0..) |*idx, i| idx.* = i;
+        std.crypto.random.shuffle(usize, state.shuffled_indices);
         state.newTarget();
         state.grid.clear(null);
         state.snake.drawToGrid(&state.grid);
@@ -98,7 +94,7 @@ pub const State = struct {
     }
 
     pub fn deinit(self: *State) void {
-        self.alloc.free(self.target_word);
+        self.alloc.free(self.shuffled_indices);
         self.snake.deinit();
         self.food_group.deinit();
         self.grid.deinit();
@@ -121,7 +117,7 @@ pub const State = struct {
         self.multiplier = 1;
         self.score = 0;
 
-        std.crypto.random.shuffle(usize, self.word_indices);
+        std.crypto.random.shuffle(usize, self.shuffled_indices);
         self.newTarget();
         self.grid.clear(null);
         self.snake.drawToGrid(&self.grid);
@@ -150,7 +146,7 @@ pub const State = struct {
             try self.snake.append(self.food_group.pop(i).cell);
             self.combo += 1;
             if (std.mem.eql(u8, self.target_word, self.partialWord())) {
-                self.multiplier = @min(max_multiplier, self.multiplier * 2);
+                self.multiplier = @min(self.max_multiplier, self.multiplier * 2);
                 self.score += 10 * self.multiplier;
                 self.game_state = .evaluate;
             } else if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
@@ -171,7 +167,7 @@ pub const State = struct {
     fn evaluate(self: *State) !void {
         try self.updateAndColide();
         self.snake.drawToGrid(&self.grid);
-        if (self.timer.read() < eval_time * std.time.ns_per_ms or self.game_state == .gameover) {
+        if (self.timer.read() < self.eval_time * std.time.ns_per_ms or self.game_state == .gameover) {
             return;
         }
         self.setTailColor(if (self.combo > 0) Color.ray_white else Color.gray);
@@ -199,7 +195,7 @@ pub const State = struct {
         self.grid.clear(null);
         self.snake.drawToGrid(&self.grid);
         self.food_group.drawToGrid(&self.grid);
-        if (self.timer.read() < gameover_time * std.time.ns_per_ms) {
+        if (self.timer.read() < self.gameover_time * std.time.ns_per_ms) {
             return;
         }
         if (rl.getKeyPressed() == .key_null) {
@@ -224,28 +220,22 @@ pub const State = struct {
         }
     }
 
-    pub fn partialWord(self: *State) [:0]u8 {
-        if (self.game_state == .gameover) {
-            return @constCast("urded");
-        }
-        var buf = scratch.scratchBuf(self.partialLength() + 1);
-        var idx: usize = 0;
-        for (self.snake.cells.items[self.partial_start_idx..]) |*cell| {
-            buf[idx] = cell.char;
-            idx += 1;
-        }
-        buf[idx] = 0;
-        return buf[0..idx :0];
-    }
-
     pub fn partialLength(self: *State) usize {
         return self.snake.length() - self.partial_start_idx;
     }
 
+    pub fn partialWord(self: *State) []const u8 {
+        var buf = scratch.scratchBuf(self.partialLength());
+        for (self.snake.cells.items[self.partial_start_idx..], 0..) |*cell, i| {
+            buf[i] = cell.char;
+        }
+        return buf;
+    }
+
     pub fn newTarget(self: *State) void {
-        std.mem.copyForwards(u8, self.target_word, util.words[self.word_indices[self.word_idx]]);
+        self.target_word = util.words[self.shuffled_indices[self.word_idx]];
         self.word_idx += 1;
-        self.word_idx %= self.word_indices.len;
+        self.word_idx %= self.shuffled_indices.len;
     }
 
     pub fn fgColor(self: *State) Color {
@@ -256,8 +246,16 @@ pub const State = struct {
         return colors[self.color_idx][1];
     }
 
+    pub fn targetColor(self: *State) Color {
+        switch (self.game_state) {
+            .seeking => return self.bgColor(),
+            else => return Color.blank,
+        }
+    }
+
     pub fn partialColor(self: *State) Color {
         switch (self.game_state) {
+            .seeking => return self.fgColor(),
             .evaluate => {
                 if (self.flashing()) {
                     return if (self.combo > 0) Color.ray_white else Color.black;
@@ -265,8 +263,14 @@ pub const State = struct {
                     return Color.blank;
                 }
             },
+            else => return Color.blank,
+        }
+    }
+
+    pub fn gameoverColor(self: *State) Color {
+        switch (self.game_state) {
             .gameover => return if (self.blinking()) Color.black else Color.blank,
-            else => return self.fgColor(),
+            else => return Color.blank,
         }
     }
 
