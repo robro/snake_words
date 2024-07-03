@@ -34,6 +34,7 @@ pub const Snake = struct {
     parts: ArrayList(Part),
     tick: f64,
 
+    facing: ?Facing = null,
     tail: ?Part = null,
     last_tick: f64 = 0,
 
@@ -63,28 +64,27 @@ pub const Snake = struct {
     }
 
     pub fn update(self: *Snake) void {
-        var facing = self.head().facing;
+        if (self.facing == null) self.facing = self.head().facing;
         switch (rl.getKeyPressed()) {
-            .key_up => facing = if (facing != .down) .up else .down,
-            .key_down => facing = if (facing != .up) .down else .up,
-            .key_left => facing = if (facing != .right) .left else .right,
-            .key_right => facing = if (facing != .left) .right else .left,
+            .key_up => self.facing = if (self.head().facing != .down) .up else self.facing,
+            .key_down => self.facing = if (self.head().facing != .up) .down else self.facing,
+            .key_left => self.facing = if (self.head().facing != .right) .left else self.facing,
+            .key_right => self.facing = if (self.head().facing != .left) .right else self.facing,
             else => {},
         }
-        self.head().facing = facing;
 
         const time = rl.getTime();
         if (time < self.last_tick + self.tick) return;
         self.last_tick = time;
 
         var coord = self.head().coord;
-        switch (self.head().facing) {
+        switch (self.facing.?) {
             .up => coord.y -= 1,
             .down => coord.y += 1,
             .left => coord.x -= 1,
             .right => coord.x += 1,
         }
-        self.parts.insert(0, .{ .facing = self.head().facing, .coord = coord }) catch unreachable;
+        self.parts.insert(0, .{ .facing = self.facing.?, .coord = coord }) catch unreachable;
         self.tail = self.parts.pop();
     }
 
