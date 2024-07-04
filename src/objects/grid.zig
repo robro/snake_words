@@ -27,11 +27,13 @@ pub const Grid = struct {
         for (0..options.rows) |row| {
             cells[row] = try options.alloc.alloc(Cell, options.cols);
         }
-        return Grid{
+        var grid = Grid{
             .cells = cells,
             .empty_char = options.empty_char,
             .alloc = options.alloc,
         };
+        grid.fill(null);
+        return grid;
     }
 
     pub fn deinit(self: *Grid) void {
@@ -40,26 +42,15 @@ pub const Grid = struct {
     }
 
     pub fn setCell(self: *Grid, cell: Cell, coord: Vector2) void {
-        if (coord.x < 0 or coord.y < 0) return;
-        if (coord.x >= @as(f32, @floatFromInt(self.getCols())) or
-            coord.y >= @as(f32, @floatFromInt(self.getRows()))) return;
-        self.cells[@intFromFloat(coord.y)][@intFromFloat(coord.x)] = cell;
-    }
-
-    pub fn getFreeCoord(self: *Grid) !Vector2 {
-        const coords = try self.alloc.alloc(Vector2, self.getRows() * self.getCols());
-        defer self.alloc.free(coords);
-
-        var i: usize = 0;
-        for (self.cells, 0..) |*row, y| {
-            for (row.*, 0..) |*cell, x| {
-                if (cell.char != self.empty_char) continue;
-                coords[i] = .{ .x = @floatFromInt(x), .y = @floatFromInt(y) };
-                i += 1;
-            }
+        if (coord.x < 0 or coord.y < 0) {
+            return;
         }
-        if (i == 0) return error.NoFreeCoords;
-        return coords[std.crypto.random.uintLessThan(usize, i)];
+        if (coord.x >= @as(f32, @floatFromInt(self.getCols())) or
+            coord.y >= @as(f32, @floatFromInt(self.getRows())))
+        {
+            return;
+        }
+        self.cells[@intFromFloat(coord.y)][@intFromFloat(coord.x)] = cell;
     }
 
     pub fn fill(self: *Grid, cell: ?Cell) void {

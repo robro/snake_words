@@ -53,13 +53,8 @@ pub const FoodGroup = struct {
         self.food.deinit();
     }
 
-    pub fn spawnFood(self: *FoodGroup, chars: []const u8, color: Color, grid: *Grid) !void {
-        for (chars) |char| {
-            const cell: Cell = .{ .char = char, .color = color };
-            const coord: Vector2 = try grid.getFreeCoord();
-            try self.food.append(try Food.init(cell, coord));
-            grid.setCell(cell, coord);
-        }
+    pub fn add(self: *FoodGroup, food: Food) !void {
+        try self.food.append(food);
     }
 
     pub fn draw(self: *FoodGroup, grid: *Grid) void {
