@@ -66,7 +66,9 @@ pub const Snake = struct {
 
     pub fn update(self: *Snake, input_queue: *InputQueue) void {
         const time = rl.getTime();
-        if (time < self.last_tick + self.tick) return;
+        if (time < self.last_tick + self.tick) {
+            return;
+        }
         self.last_tick = time;
 
         if (self.facing == null) self.facing = self.head().facing;
@@ -106,7 +108,9 @@ pub const Snake = struct {
             return true;
         }
         for (self.parts.items[1..]) |*part| {
-            if (self.head().coord.equals(part.coord) == 1) return true;
+            if (self.head().coord.equals(part.coord) == 1) {
+                return true;
+            }
         }
         return false;
     }

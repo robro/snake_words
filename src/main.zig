@@ -9,6 +9,7 @@ const Color = rl.Color;
 const Vector2 = rl.Vector2;
 const Allocator = std.mem.Allocator;
 const Facing = objects.snake.Facing;
+const TSOptions = objects.title.TSOptions;
 const GridOptions = objects.grid.GridOptions;
 const SnakeOptions = objects.snake.SnakeOptions;
 const FoodGroupOptions = objects.food.FoodGroupOptions;
@@ -21,12 +22,12 @@ const monoText = engine.render.monoText;
 const renderGrid = engine.render.renderGrid;
 
 // TODO:
-//  Add title screen
 //  Add visual flair to grid action
 //  ✅ Make font look better at different sizes
 //  ✅ Handle different sized words elegantly
 //  ✅ Fix scrambled letter regression
 //  ✅ Make score tally up (tween)
+//  ✅ Add title screen
 
 const title = "snake_words";
 
@@ -78,6 +79,13 @@ pub fn main() !void {
         const deinit_status = gpa.deinit();
         if (deinit_status == .leak) @panic("gpa leaked!");
     }
+
+    const ts_options = TSOptions{
+        .rows = grid_rows,
+        .cols = grid_cols,
+        .tick = snake_tick,
+        .alloc = alloc,
+    };
     const grid_options = GridOptions{
         .rows = grid_rows,
         .cols = grid_cols,
@@ -96,7 +104,13 @@ pub fn main() !void {
         .alloc = alloc,
     };
 
-    var state = try State.init(grid_options, snake_options, food_group_options, alloc);
+    var state = try State.init(
+        ts_options,
+        grid_options,
+        snake_options,
+        food_group_options,
+        alloc,
+    );
     defer state.deinit();
 
     rl.setTargetFPS(fps);
@@ -153,6 +167,19 @@ fn renderHUD(state: *State) void {
         state.partialColor(),
     );
 
+    // Title text
+    monoText(
+        getFont(.large),
+        @ptrCast(state.title_text),
+        .{
+            .x = (win_width / 2) - (gameover_width / 2) + (cell_size / 2),
+            .y = hud_y,
+        },
+        cell_size * 2,
+        cell_size * 2,
+        state.titleColor(),
+    );
+
     // Gameover text
     monoText(
         getFont(.large),
@@ -185,7 +212,7 @@ fn renderHUD(state: *State) void {
         },
         font_size_medium,
         2,
-        state.bgColor(),
+        state.pointsColor(),
     );
 
     // Combo
@@ -198,7 +225,7 @@ fn renderHUD(state: *State) void {
         },
         font_size_small,
         2,
-        state.bgColor(),
+        state.pointsColor(),
     );
 
     // Multiplier
