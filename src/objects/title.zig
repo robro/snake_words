@@ -51,7 +51,7 @@ pub const TitleSnake = struct {
         var text_idx: usize = 0;
         const text = "snake_words";
 
-        while (ts.coords.items.len < options.rows * options.cols) : (text_idx += 1) {
+        while (true) : (text_idx += 1) {
             if (facing == .up or facing == .down) {
                 turn_wait = turn_wait - 1;
             }
@@ -73,7 +73,7 @@ pub const TitleSnake = struct {
                             facing = .left;
                         }
                     }
-                } else if (coord.x == 1) {
+                } else if (coord.x == 0) {
                     if (facing == .left) {
                         facing = .down;
                     } else if (facing == .down) {
@@ -92,11 +92,11 @@ pub const TitleSnake = struct {
                     } else if (facing == .up) {
                         if (coord.y == 0) {
                             break;
-                        } else if (turn_wait == 0 and options.cols > 2) {
+                        } else if (turn_wait == 0 and options.cols > 1) {
                             facing = .right;
                         }
                     }
-                } else if (coord.x == @as(f32, @floatFromInt(options.cols - 2))) {
+                } else if (coord.x == @as(f32, @floatFromInt(options.cols - 1))) {
                     if (facing == .right) {
                         facing = .up;
                     } else if (facing == .up) {
