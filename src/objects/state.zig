@@ -23,6 +23,7 @@ const Vector2 = rl.Vector2;
 
 const GameState = enum {
     title,
+    starting,
     seeking,
     evaluate,
     gameover,
@@ -64,7 +65,8 @@ pub const State = struct {
     tally_rate: f64 = 100, // points per second
     game_state: GameState = .title,
     title_wait: usize = 500, // ms
-    eval_time: usize = 1_000, // ms
+    start_wait: usize = 750, // ms
+    eval_time: usize = 750, // ms
     gameover_wait: usize = 500, // ms
     gameover_text: []const u8 = "udied",
     title_text: []const u8 = "start",
@@ -122,6 +124,7 @@ pub const State = struct {
     pub fn update(self: *State) !void {
         try switch (self.game_state) {
             .title => self.title(),
+            .starting => self.starting(),
             .seeking => self.seeking(),
             .evaluate => self.evaluate(),
             .gameover => self.gameover(),
@@ -136,6 +139,15 @@ pub const State = struct {
             return;
         }
         if (rl.getKeyPressed() == .key_null) {
+            return;
+        }
+        self.timer.reset();
+        self.grid.fill(null);
+        self.game_state = .starting;
+    }
+
+    fn starting(self: *State) !void {
+        if (self.timer.read() < self.start_wait * std.time.ns_per_ms) {
             return;
         }
         try self.spawnFood(self.target_word, self.fgColor());
@@ -293,7 +305,10 @@ pub const State = struct {
     }
 
     pub fn partialLength(self: *State) usize {
-        return self.snake.length() - self.partial_idx;
+        switch (self.game_state) {
+            .title => return self.title_text.len - 1,
+            else => return self.snake.length() - self.partial_idx,
+        }
     }
 
     pub fn partialWord(self: *State) []const u8 {
@@ -330,15 +345,18 @@ pub const State = struct {
 
     pub fn titleColor(self: *State) Color {
         switch (self.game_state) {
-            .title => return if (self.blinking()) Color.black else Color.blank,
+            .title => return Color.light_gray,
+            .starting => return if (self.flashing()) Color.ray_white else Color.blank,
             else => return Color.blank,
         }
     }
 
     pub fn pointsColor(self: *State) Color {
         switch (self.game_state) {
-            .title => return Color.blank,
-            else => return self.bgColor(),
+            .seeking => return self.bgColor(),
+            .evaluate => return self.bgColor(),
+            .gameover => return self.bgColor(),
+            else => return Color.blank,
         }
     }
 
@@ -372,6 +390,7 @@ pub const State = struct {
 
     pub fn cursorColor(self: *State) Color {
         switch (self.game_state) {
+            .title => return if (self.blinking()) Color.light_gray else Color.black,
             .seeking => return if (self.blinking()) self.fgColor() else Color.black,
             else => return Color.blank,
         }
@@ -379,15 +398,15 @@ pub const State = struct {
 
     pub fn multiplierColor(self: *State) Color {
         switch (self.game_state) {
-            .title => return Color.blank,
+            .seeking => return self.bgColor(),
             .evaluate => return if (self.multiplier > 1) self.fgColor() else self.bgColor(),
-            else => return self.bgColor(),
+            .gameover => return self.bgColor(),
+            else => return Color.blank,
         }
     }
 
     pub fn evaluateColor(self: *State) Color {
         switch (self.game_state) {
-            .title => return Color.ray_white,
             .evaluate => return if (self.combo == 0) self.bgColor() else Color.blank,
             .gameover => return self.bgColor(),
             else => return Color.blank,
@@ -395,12 +414,16 @@ pub const State = struct {
     }
 
     fn flashing(self: *State) bool {
-        if (self.timer.read() / 100_000_000 % 2 == 0) return true;
+        if (self.timer.read() / 75_000_000 % 2 == 0) {
+            return true;
+        }
         return false;
     }
 
     fn blinking(self: *State) bool {
-        if (self.timer.read() / 400_000_000 % 2 == 0) return true;
+        if (self.timer.read() / 400_000_000 % 2 == 0) {
+            return true;
+        }
         return false;
     }
 };
