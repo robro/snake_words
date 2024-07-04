@@ -21,12 +21,12 @@ const monoText = engine.render.monoText;
 const renderGrid = engine.render.renderGrid;
 
 // TODO:
-//  Make score tally up (tween)
-//  Add visual flair to grid action
 //  Add title screen
+//  Add visual flair to grid action
 //  ✅ Make font look better at different sizes
 //  ✅ Handle different sized words elegantly
 //  ✅ Fix scrambled letter regression
+//  ✅ Make score tally up (tween)
 
 const title = "snake_words";
 
@@ -178,7 +178,7 @@ fn renderHUD(state: *State) void {
     // Score
     rl.drawTextEx(
         getFont(.medium),
-        std.fmt.bufPrintZ(scratch.scratchBuf(16), score_fmt, .{state.score}) catch unreachable,
+        std.fmt.bufPrintZ(scratch.scratchBuf(16), score_fmt, .{state.scoreDisplay()}) catch unreachable,
         .{
             .x = cell_size,
             .y = win_height - cell_size * 3,

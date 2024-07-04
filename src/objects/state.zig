@@ -37,11 +37,9 @@ pub const State = struct {
     grid: Grid,
     snake: Snake,
     food_group: FoodGroup,
-
     grid_options: GridOptions,
     snake_options: SnakeOptions,
     food_group_options: FoodGroupOptions,
-
     shuffled_indices: []usize,
     partial_idx: usize,
     alloc: Allocator,
@@ -52,14 +50,17 @@ pub const State = struct {
     color_idx: usize = 0,
     combo: usize = 0,
     max_combo: usize = 0,
-    multiplier: usize = 1,
-    score: usize = 0,
+    multiplier: f64 = 1,
+    max_multiplier: f64 = 8,
+    score: f64 = 0,
+    prev_score: f64 = 0,
+    score_time: f64 = 0,
+    tally_rate: f64 = 100, // points per second
     game_state: GameState = .seeking,
-    target_word: []const u8 = undefined,
-    max_multiplier: usize = 8,
     eval_time: usize = 1_000, // ms
     gameover_time: usize = 1_000, // ms
     gameover_text: []const u8 = "udied",
+    target_word: []const u8 = undefined,
 
     pub fn init(
         grid_options: GridOptions,
@@ -120,6 +121,7 @@ pub const State = struct {
         self.max_combo = 0;
         self.multiplier = 1;
         self.score = 0;
+        self.prev_score = 0;
 
         std.crypto.random.shuffle(usize, self.shuffled_indices);
         self.newTargetWord();
@@ -151,14 +153,14 @@ pub const State = struct {
             self.combo += 1;
             if (std.mem.eql(u8, self.target_word, self.partialWord())) {
                 self.multiplier = @min(self.max_multiplier, self.multiplier * 2);
-                self.score += 10 * self.multiplier;
+                self.scoring();
                 self.game_state = .evaluate;
             } else if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
                 self.combo = 0;
                 self.multiplier = 1;
                 self.game_state = .evaluate;
             } else {
-                self.score += 10 * self.multiplier;
+                self.scoring();
             }
             self.max_combo = @max(self.max_combo, self.combo);
             self.timer.reset();
@@ -218,6 +220,23 @@ pub const State = struct {
             self.timer.reset();
             self.game_state = .gameover;
         }
+    }
+
+    fn scoring(self: *State) void {
+        self.prev_score = self.score;
+        self.score += 10 * self.multiplier;
+        self.score_time = rl.getTime();
+    }
+
+    pub fn scoreDisplay(self: *State) f64 {
+        if (self.game_state == .gameover or self.score == self.prev_score) {
+            return self.score;
+        }
+        return @floor(std.math.lerp(
+            self.prev_score,
+            self.score,
+            @min(1, (rl.getTime() - self.score_time) / (self.score - self.prev_score) * self.tally_rate),
+        ));
     }
 
     fn setTailColor(self: *State, color: Color) void {
