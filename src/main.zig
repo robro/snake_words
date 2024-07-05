@@ -114,6 +114,7 @@ pub fn main() !void {
         defer rl.endDrawing();
 
         rl.clearBackground(bg_color);
+        state.draw();
         renderGrid(&state.grid, rl.Vector2.zero(), cell_size, .small);
         renderHUD(&state);
         // rl.drawFPS(win_width - 30, 0);

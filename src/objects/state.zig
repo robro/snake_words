@@ -67,14 +67,13 @@ pub const State = struct {
     prev_score: f64 = 0,
     score_time: f64 = 0,
     tally_rate: f64 = 100, // points per second
-    current_state: GameState = .title,
-    title_wait: usize = 500, // ms
     start_wait: usize = 750, // ms
     eval_time: usize = 1000, // ms
     gameover_wait: usize = 500, // ms
     gameover_text: []const u8 = "udied",
     title_text: []const u8 = "start",
     target_word: []const u8 = undefined,
+    current_state: GameState = .title,
 
     pub fn init(
         ts_options: TSOptions,
@@ -139,31 +138,56 @@ pub const State = struct {
         };
     }
 
-    fn title(self: *State) !void {
+    pub fn draw(self: *State) void {
+        switch (self.current_state) {
+            .title => self.drawTitle(),
+            .starting => self.grid.fill(null),
+            .gameover => self.drawGameover(),
+            else => self.drawGameplay(),
+        }
+    }
+
+    fn drawTitle(self: *State) void {
         self.grid.fill(null);
-        try self.title_snake.update();
         self.title_snake.draw(&self.grid);
-        if (self.timer.read() < self.title_wait * std.time.ns_per_ms) {
-            return;
-        }
-        if (rl.getKeyPressed() == .key_null) {
-            return;
-        }
-        self.timer.reset();
+    }
+
+    fn drawGameplay(self: *State) void {
+        self.grid.fill(.{ .char = self.grid.empty_char, .color = self.bgColor() });
+        self.trail.draw(&self.grid);
+        self.splash_group.draw(&self.grid);
+        self.snake.draw(&self.grid);
+        self.food_group.draw(&self.grid);
+    }
+
+    fn drawGameover(self: *State) void {
         self.grid.fill(null);
-        self.current_state = .starting;
+        self.snake.draw(&self.grid);
+        self.food_group.draw(&self.grid);
+    }
+
+    fn title(self: *State) !void {
+        try self.title_snake.update();
+        if (rl.getKeyPressed() != .key_null) {
+            self.timer.reset();
+            self.current_state = .starting;
+        }
     }
 
     fn starting(self: *State) !void {
-        if (self.timer.read() < self.start_wait * std.time.ns_per_ms) {
-            return;
+        if (self.timer.read() > self.start_wait * std.time.ns_per_ms) {
+            try self.spawnFood(self.target_word, self.fgColor());
+            self.current_state = .seeking;
         }
-        try self.spawnFood(self.target_word, self.fgColor());
-        self.current_state = .seeking;
     }
 
     fn seeking(self: *State) !void {
-        try self.updateAndCollide();
+        try self.updateSnake();
+        if (self.snake.colliding(&self.grid)) {
+            self.timer.reset();
+            self.current_state = .gameover;
+            return;
+        }
         for (self.food_group.food.items, 0..) |*food, i| {
             if (!food.edible() or self.snake.head().coord.equals(food.coord) == 0) {
                 continue;
@@ -180,12 +204,9 @@ pub const State = struct {
                     500,
                     0.04,
                 );
+                self.food_group.clear();
                 self.current_state = .evaluate;
-            } else if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
-                self.combo = 0;
-                self.multiplier = 1;
-                self.current_state = .evaluate;
-            } else {
+            } else if (std.mem.startsWith(u8, self.target_word, self.partialWord())) {
                 self.scoring();
                 try self.splash_group.spawnSplash(
                     self.fgColor(),
@@ -194,40 +215,37 @@ pub const State = struct {
                     350,
                     0.05,
                 );
+            } else {
+                self.combo = 0;
+                self.multiplier = 1;
+                self.food_group.clear();
+                self.current_state = .evaluate;
             }
             self.max_combo = @max(self.max_combo, self.combo);
             self.timer.reset();
-            break;
+            return;
         }
-        self.grid.fill(.{ .char = self.grid.empty_char, .color = self.bgColor() });
-        self.trail.draw(&self.grid);
-        self.splash_group.draw(&self.grid);
-        self.snake.draw(&self.grid);
-        self.food_group.draw(&self.grid);
     }
 
     fn evaluate(self: *State) !void {
-        if (self.food_group.size() != 0) self.food_group.clear();
-        try self.updateAndCollide();
-        self.grid.fill(.{ .char = self.grid.empty_char, .color = self.bgColor() });
-        self.trail.draw(&self.grid);
-        self.splash_group.draw(&self.grid);
-        self.snake.draw(&self.grid);
-        if (self.timer.read() < self.eval_time * std.time.ns_per_ms or self.current_state == .gameover) {
+        try self.updateSnake();
+        if (self.snake.colliding(&self.grid)) {
+            self.timer.reset();
+            self.current_state = .gameover;
             return;
         }
-        self.setTailColor(if (self.combo > 0) Color.ray_white else Color.gray);
-        self.partial_idx = self.snake.length();
-        self.color_idx += 1;
-        self.color_idx %= colors.len;
-        self.target_word = self.nextTarget();
-        try self.spawnFood(self.target_word, self.fgColor());
-        self.timer.reset();
-        self.current_state = .seeking;
+        if (self.timer.read() > self.eval_time * std.time.ns_per_ms) {
+            self.setTailColor(if (self.combo > 0) Color.ray_white else Color.gray);
+            self.partial_idx = self.snake.length();
+            self.color_idx = (self.color_idx + 1) % colors.len;
+            self.target_word = self.nextTarget();
+            try self.spawnFood(self.target_word, self.fgColor());
+            self.timer.reset();
+            self.current_state = .seeking;
+        }
     }
 
     fn gameover(self: *State) !void {
-        self.grid.fill(null);
         self.combo = self.max_combo;
         for (self.food_group.food.items) |*food| {
             food.cell.char = util.randomChar();
@@ -235,22 +253,16 @@ pub const State = struct {
         for (self.snake.cells.items) |*cell| {
             cell.char = util.randomChar();
         }
-        self.grid.fill(null);
-        self.snake.draw(&self.grid);
-        self.food_group.draw(&self.grid);
-        if (self.timer.read() < self.gameover_wait * std.time.ns_per_ms) {
-            return;
+        if (self.timer.read() > self.gameover_wait * std.time.ns_per_ms and
+            rl.getKeyPressed() != .key_null)
+        {
+            try self.reset();
+            try self.spawnFood(self.target_word, self.fgColor());
+            self.current_state = .seeking;
         }
-        if (rl.getKeyPressed() == .key_null) {
-            return;
-        }
-        try self.reset();
-        try self.spawnFood(self.target_word, self.fgColor());
-        self.current_state = .seeking;
-        // self.game_state = .title;
     }
 
-    fn updateAndCollide(self: *State) !void {
+    fn updateSnake(self: *State) !void {
         try self.input_queue.add(rl.getKeyPressed());
         self.snake.update(&self.input_queue);
         self.trail.coord = self.snake.tail.?.coord;
@@ -259,10 +271,6 @@ pub const State = struct {
         }
         try self.trail.update();
         try self.splash_group.update();
-        if (self.snake.colliding(&self.grid)) {
-            self.timer.reset();
-            self.current_state = .gameover;
-        }
     }
 
     fn scoring(self: *State) void {
