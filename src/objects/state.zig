@@ -16,6 +16,7 @@ const FoodGroupOptions = @import("food.zig").FoodGroupOptions;
 const Food = @import("food.zig").Food;
 const Trail = @import("particle.zig").Trail;
 const SplashGroup = @import("particle.zig").SplashGroup;
+const SplashOptions = @import("particle.zig").SplashOptions;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const Timer = std.time.Timer;
@@ -74,6 +75,17 @@ pub const State = struct {
     title_text: []const u8 = "start",
     target_word: []const u8 = undefined,
     game_state: GameState = .title,
+    trail_lifetime: u64 = 1000, // ms
+    small_splash: SplashOptions = .{
+        .max_size = 5,
+        .lifetime = 350,
+        .tick = 0.05,
+    },
+    big_splash: SplashOptions = .{
+        .max_size = 24,
+        .lifetime = 500,
+        .tick = 0.04,
+    },
 
     pub fn init(
         ts_options: TSOptions,
@@ -88,7 +100,7 @@ pub const State = struct {
             .snake = try Snake.init(snake_options),
             .food_group = FoodGroup.init(food_group_options),
             .splash_group = SplashGroup.init(alloc),
-            .trail = Trail.init(Color.light_gray, Vector2.zero(), 1000, alloc),
+            .trail = undefined,
             .ts_options = ts_options,
             .grid_options = grid_options,
             .snake_options = snake_options,
@@ -103,6 +115,7 @@ pub const State = struct {
         for (state.word_indices, 0..) |*idx, i| idx.* = i;
         std.crypto.random.shuffle(usize, state.word_indices);
         state.target_word = state.nextTarget();
+        state.trail = Trail.init(Color.blank, state.trail_lifetime, alloc);
         return state;
     }
 
@@ -199,12 +212,12 @@ pub const State = struct {
                 return;
             }
             if (std.mem.eql(u8, self.target_word, self.partialWord())) {
-                try self.splash_group.spawnSplash(Color.ray_white, self.snake.head().coord, 24, 500, 0.04);
+                try self.splash_group.spawnSplash(Color.ray_white, self.snake.head().coord, self.big_splash);
                 self.multiplier = @min(self.max_multiplier, self.multiplier * 2);
                 self.food_group.clear();
                 self.setState(GameState.evaluate);
             } else {
-                try self.splash_group.spawnSplash(self.fgColor(), self.snake.head().coord, 5, 350, 0.05);
+                try self.splash_group.spawnSplash(self.fgColor(), self.snake.head().coord, self.small_splash);
             }
             self.combo += 1;
             self.max_combo = @max(self.max_combo, self.combo);

@@ -38,16 +38,14 @@ const Particle = struct {
 pub const Trail = struct {
     particles: ArrayList(Particle),
     color: Color,
-    coord: Vector2,
-    last_coord: Vector2,
     lifetime: u64, // ms
+    coord: ?Vector2 = null,
+    last_coord: ?Vector2 = null,
 
-    pub fn init(color: Color, coord: Vector2, lifetime: u64, alloc: Allocator) Trail {
+    pub fn init(color: Color, lifetime: u64, alloc: Allocator) Trail {
         return Trail{
             .particles = ArrayList(Particle).init(alloc),
             .color = color,
-            .coord = coord,
-            .last_coord = coord,
             .lifetime = lifetime,
         };
     }
@@ -57,12 +55,15 @@ pub const Trail = struct {
     }
 
     pub fn update(self: *Trail) !void {
+        if (self.coord == null) {
+            return;
+        }
         while (self.particles.items.len > 0 and self.particles.items[0].finished()) {
             _ = self.particles.orderedRemove(0);
         }
-        if (self.last_coord.equals(self.coord) == 0) {
-            self.last_coord = self.coord;
-            try self.particles.append(try Particle.init(self.color, self.last_coord, self.lifetime));
+        if (self.last_coord == null or self.last_coord.?.equals(self.coord.?) == 0) {
+            self.last_coord = self.coord.?;
+            try self.particles.append(try Particle.init(self.color, self.last_coord.?, self.lifetime));
         }
     }
 
@@ -83,6 +84,12 @@ pub const Trail = struct {
             grid.cells[y][x].color = Color.init(r, g, b, grid_color.a);
         }
     }
+};
+
+pub const SplashOptions = struct {
+    max_size: usize,
+    lifetime: u64,
+    tick: f64,
 };
 
 pub const Splash = struct {
@@ -204,20 +211,13 @@ pub const SplashGroup = struct {
         self.splashes.deinit();
     }
 
-    pub fn spawnSplash(
-        self: *SplashGroup,
-        color: Color,
-        coord: Vector2,
-        max_size: usize,
-        lifetime: u64,
-        tick: f64,
-    ) !void {
+    pub fn spawnSplash(self: *SplashGroup, color: Color, coord: Vector2, options: SplashOptions) !void {
         try self.splashes.append(try Splash.init(
             color,
             coord,
-            max_size,
-            lifetime,
-            tick,
+            options.max_size,
+            options.lifetime,
+            options.tick,
             self.alloc,
         ));
     }
