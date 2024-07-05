@@ -169,23 +169,21 @@ pub const State = struct {
     fn title(self: *State) !void {
         try self.title_snake.update();
         if (rl.getKeyPressed() != .key_null) {
-            self.timer.reset();
-            self.current_state = .starting;
+            self.setState(GameState.starting);
         }
     }
 
     fn starting(self: *State) !void {
         if (self.timer.read() > self.start_wait * std.time.ns_per_ms) {
             try self.spawnFood(self.target_word, self.fgColor());
-            self.current_state = .seeking;
+            self.setState(GameState.seeking);
         }
     }
 
     fn seeking(self: *State) !void {
-        try self.updateSnake();
+        try self.updateBoard();
         if (self.snake.colliding(&self.grid)) {
-            self.timer.reset();
-            self.current_state = .gameover;
+            self.setState(GameState.gameover);
             return;
         }
         for (self.food_group.food.items, 0..) |*food, i| {
@@ -193,12 +191,11 @@ pub const State = struct {
                 continue;
             }
             try self.snake.append(self.food_group.pop(i).cell);
-            self.timer.reset();
             if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
                 self.combo = 0;
                 self.multiplier = 1;
                 self.food_group.clear();
-                self.current_state = .evaluate;
+                self.setState(GameState.evaluate);
                 return;
             }
             self.combo += 1;
@@ -206,7 +203,7 @@ pub const State = struct {
                 try self.splash_group.spawnSplash(Color.ray_white, self.snake.head().coord, 24, 500, 0.04);
                 self.multiplier = @min(self.max_multiplier, self.multiplier * 2);
                 self.food_group.clear();
-                self.current_state = .evaluate;
+                self.setState(GameState.evaluate);
             } else {
                 try self.splash_group.spawnSplash(self.fgColor(), self.snake.head().coord, 5, 350, 0.05);
             }
@@ -214,15 +211,15 @@ pub const State = struct {
             self.prev_score = self.score;
             self.score += 10 * self.multiplier;
             self.score_time = rl.getTime();
+            self.timer.reset();
             return;
         }
     }
 
     fn evaluate(self: *State) !void {
-        try self.updateSnake();
+        try self.updateBoard();
         if (self.snake.colliding(&self.grid)) {
-            self.timer.reset();
-            self.current_state = .gameover;
+            self.setState(GameState.gameover);
             return;
         }
         if (self.timer.read() > self.eval_time * std.time.ns_per_ms) {
@@ -231,8 +228,7 @@ pub const State = struct {
             self.color_idx = (self.color_idx + 1) % colors.len;
             self.target_word = self.nextTarget();
             try self.spawnFood(self.target_word, self.fgColor());
-            self.timer.reset();
-            self.current_state = .seeking;
+            self.setState(GameState.seeking);
         }
     }
 
@@ -249,11 +245,16 @@ pub const State = struct {
         {
             try self.reset();
             try self.spawnFood(self.target_word, self.fgColor());
-            self.current_state = .seeking;
+            self.setState(GameState.seeking);
         }
     }
 
-    fn updateSnake(self: *State) !void {
+    fn setState(self: *State, state: GameState) void {
+        self.timer.reset();
+        self.current_state = state;
+    }
+
+    fn updateBoard(self: *State) !void {
         try self.input_queue.add(rl.getKeyPressed());
         self.snake.update(&self.input_queue);
         self.trail.coord = self.snake.tail.?.coord;
@@ -264,7 +265,7 @@ pub const State = struct {
         try self.splash_group.update();
     }
 
-    pub fn spawnFood(self: *State, chars: []const u8, color: Color) !void {
+    fn spawnFood(self: *State, chars: []const u8, color: Color) !void {
         for (chars) |char| {
             const cell: Cell = .{ .char = char, .color = color };
             const coord = self.getFreeCoord();
@@ -274,7 +275,7 @@ pub const State = struct {
         }
     }
 
-    pub fn getFreeCoord(self: *State) ?Vector2 {
+    fn getFreeCoord(self: *State) ?Vector2 {
         var occupied = ArrayList(Vector2).init(self.alloc);
         defer occupied.deinit();
 
@@ -289,20 +290,22 @@ pub const State = struct {
 
         for (0..self.grid.getRows()) |y| {
             for (0..self.grid.getCols()) |x| {
-                var occ_idx: ?usize = null;
+                var occupied_idx: ?usize = null;
                 for (occupied.items, 0..) |*coord, i| {
-                    if (coord.x == @as(f32, @floatFromInt(x)) and coord.y == @as(f32, @floatFromInt(y))) {
-                        occ_idx = i;
+                    if (coord.x == @as(f32, @floatFromInt(x)) and
+                        coord.y == @as(f32, @floatFromInt(y)))
+                    {
+                        occupied_idx = i;
                         break;
                     }
                 }
-                if (occ_idx == null) {
+                if (occupied_idx == null) {
                     free.append(.{
                         .x = @as(f32, @floatFromInt(x)),
                         .y = @as(f32, @floatFromInt(y)),
                     }) catch continue;
                 } else {
-                    _ = occupied.swapRemove(occ_idx.?);
+                    _ = occupied.swapRemove(occupied_idx.?);
                 }
             }
         }
@@ -312,27 +315,17 @@ pub const State = struct {
         return null;
     }
 
-    pub fn scoreDisplay(self: *State) f64 {
-        if (self.current_state == .gameover or self.score == self.prev_score) {
-            return self.score;
+    fn nextTarget(self: *State) []const u8 {
+        defer {
+            self.word_idx += 1;
+            self.word_idx %= self.word_indices.len;
         }
-        return @floor(std.math.lerp(
-            self.prev_score,
-            self.score,
-            @min(1, (rl.getTime() - self.score_time) / (self.score - self.prev_score) * self.tally_rate),
-        ));
+        return util.words[self.word_indices[self.word_idx]];
     }
 
     fn setTailColor(self: *State, color: Color) void {
         for (self.snake.cells.items[self.partial_idx..]) |*cell| {
             cell.color = color;
-        }
-    }
-
-    pub fn partialLength(self: *State) usize {
-        switch (self.current_state) {
-            .title => return self.title_text.len - 1,
-            else => return self.snake.length() - self.partial_idx,
         }
     }
 
@@ -344,12 +337,22 @@ pub const State = struct {
         return buf;
     }
 
-    pub fn nextTarget(self: *State) []const u8 {
-        defer {
-            self.word_idx += 1;
-            self.word_idx %= self.word_indices.len;
+    pub fn partialLength(self: *State) usize {
+        switch (self.current_state) {
+            .title => return self.title_text.len - 1,
+            else => return self.snake.length() - self.partial_idx,
         }
-        return util.words[self.word_indices[self.word_idx]];
+    }
+
+    pub fn scoreDisplay(self: *State) f64 {
+        if (self.current_state == .gameover or self.score == self.prev_score) {
+            return self.score;
+        }
+        return @floor(std.math.lerp(
+            self.prev_score,
+            self.score,
+            @min(1, (rl.getTime() - self.score_time) / (self.score - self.prev_score) * self.tally_rate),
+        ));
     }
 
     pub fn targetDisplay(self: *State) []const u8 {
