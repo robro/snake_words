@@ -276,7 +276,7 @@ pub const State = struct {
             p.src_color = self.fgColor();
         }
         try self.trail.update();
-        try self.splash_group.update();
+        try self.splash_group.update(&self.grid);
     }
 
     fn spawnFood(self: *State, chars: []const u8, color: Color) !void {

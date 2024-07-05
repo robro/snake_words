@@ -89,6 +89,7 @@ pub const Splash = struct {
     tick: f64, // seconds
     last_tick: f64 = 0,
     size: usize = 1,
+    finished_count: usize = 0,
 
     const NumberedVec2 = struct {
         num: usize,
@@ -127,10 +128,11 @@ pub const Splash = struct {
         self.visited.deinit();
     }
 
-    pub fn update(self: *Splash) !void {
-        while (self.particles.items.len > 0 and self.particles.items[0].finished()) {
+    pub fn update(self: *Splash, grid: *Grid) !void {
+        defer while (self.particles.items.len > 0 and self.particles.items[0].finished()) {
             _ = self.particles.orderedRemove(0);
-        }
+            self.finished_count += 1;
+        };
         if (self.size > self.max_size) {
             return;
         }
@@ -148,6 +150,11 @@ pub const Splash = struct {
             try self.particles.append(try Particle.init(self.color, num_vec.coord, self.lifetime));
             outer: for (offsets) |offset| {
                 const next_coord = num_vec.coord.add(offset);
+                if (next_coord.x < 0 or next_coord.x >= @as(f32, @floatFromInt(grid.getCols())) or
+                    next_coord.y < 0 or next_coord.y >= @as(f32, @floatFromInt(grid.getRows())))
+                {
+                    continue;
+                }
                 for (self.visited.items) |*coord| {
                     if (next_coord.equals(coord.*) == 1) {
                         continue :outer;
@@ -160,7 +167,7 @@ pub const Splash = struct {
     }
 
     pub fn finished(self: *Splash) bool {
-        return self.size >= self.max_size and self.particles.items.len == 0;
+        return self.particles.items.len == 0 and self.finished_count > 0;
     }
 
     pub fn draw(self: *Splash, grid: *Grid) void {
@@ -194,20 +201,17 @@ pub const SplashGroup = struct {
         ));
     }
 
-    pub fn update(self: *SplashGroup) !void {
-        if (self.splashes.items.len == 0) {
-            return;
+    pub fn update(self: *SplashGroup, grid: *Grid) !void {
+        for (self.splashes.items) |*splash| {
+            try splash.update(grid);
         }
-        var i: usize = self.splashes.items.len - 1;
-        while (i >= 0) : (i -= 1) {
+        var i: usize = self.splashes.items.len;
+        while (i > 0) {
+            i -= 1;
             if (self.splashes.items[i].finished()) {
                 self.splashes.items[i].deinit();
                 _ = self.splashes.orderedRemove(i);
             }
-            if (i == 0) break;
-        }
-        for (self.splashes.items) |*splash| {
-            try splash.update();
         }
     }
 
@@ -230,9 +234,8 @@ pub fn lerpColor(src_color: Color, current: u64, limit: u64) Color {
 
 pub fn drawParticles(particles: *ArrayList(Particle), grid: *Grid) void {
     for (particles.items) |*p| {
-        if (p.coord.x < 0 or p.coord.y < 0 or
-            p.coord.x >= @as(f32, @floatFromInt(grid.getCols())) or
-            p.coord.y >= @as(f32, @floatFromInt(grid.getCols())))
+        if (p.coord.x < 0 or p.coord.x >= @as(f32, @floatFromInt(grid.getCols())) or
+            p.coord.y < 0 or p.coord.y >= @as(f32, @floatFromInt(grid.getCols())))
         {
             continue;
         }
