@@ -42,10 +42,8 @@ pub const Grid = struct {
     }
 
     pub fn setCell(self: *Grid, cell: Cell, coord: Vector2) void {
-        if (coord.x < 0 or coord.y < 0) {
-            return;
-        }
-        if (coord.x >= @as(f32, @floatFromInt(self.getCols())) or
+        if (coord.x < 0 or coord.y < 0 or
+            coord.x >= @as(f32, @floatFromInt(self.getCols())) or
             coord.y >= @as(f32, @floatFromInt(self.getRows())))
         {
             return;

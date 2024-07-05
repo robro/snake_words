@@ -45,7 +45,7 @@ pub const FoodGroupOptions = struct {
 pub const FoodGroup = struct {
     food: ArrayList(Food),
 
-    pub fn init(options: FoodGroupOptions) !FoodGroup {
+    pub fn init(options: FoodGroupOptions) FoodGroup {
         return FoodGroup{ .food = ArrayList(Food).init(options.alloc) };
     }
 

@@ -4,7 +4,6 @@ const util = @import("util");
 const scratch = @import("scratch");
 const engine = @import("engine");
 
-const Color = rl.Color;
 const TitleSnake = @import("title.zig").TitleSnake;
 const TSOptions = @import("title.zig").TSOptions;
 const Snake = @import("snake.zig").Snake;
@@ -15,11 +14,13 @@ const Cell = @import("grid.zig").Cell;
 const FoodGroup = @import("food.zig").FoodGroup;
 const FoodGroupOptions = @import("food.zig").FoodGroupOptions;
 const Food = @import("food.zig").Food;
+const SplashGroup = @import("splash.zig").SplashGroup;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const Timer = std.time.Timer;
 const InputQueue = engine.input.InputQueue;
 const Vector2 = rl.Vector2;
+const Color = rl.Color;
 
 const GameState = enum {
     title,
@@ -43,6 +44,7 @@ pub const State = struct {
     grid: Grid,
     snake: Snake,
     food_group: FoodGroup,
+    splash_group: SplashGroup,
     ts_options: TSOptions,
     grid_options: GridOptions,
     snake_options: SnakeOptions,
@@ -66,7 +68,7 @@ pub const State = struct {
     game_state: GameState = .title,
     title_wait: usize = 500, // ms
     start_wait: usize = 750, // ms
-    eval_time: usize = 750, // ms
+    eval_time: usize = 1000, // ms
     gameover_wait: usize = 500, // ms
     gameover_text: []const u8 = "udied",
     title_text: []const u8 = "start",
@@ -83,7 +85,8 @@ pub const State = struct {
             .title_snake = try TitleSnake.init(ts_options),
             .grid = try Grid.init(grid_options),
             .snake = try Snake.init(snake_options),
-            .food_group = try FoodGroup.init(food_group_options),
+            .food_group = FoodGroup.init(food_group_options),
+            .splash_group = SplashGroup.init(alloc),
             .ts_options = ts_options,
             .grid_options = grid_options,
             .snake_options = snake_options,
@@ -106,6 +109,7 @@ pub const State = struct {
         self.grid.deinit();
         self.snake.deinit();
         self.food_group.deinit();
+        self.splash_group.deinit();
         self.input_queue.deinit();
         self.alloc.free(self.word_indices);
     }
@@ -165,6 +169,13 @@ pub const State = struct {
             if (std.mem.eql(u8, self.target_word, self.partialWord())) {
                 self.multiplier = @min(self.max_multiplier, self.multiplier * 2);
                 self.scoring();
+                try self.splash_group.spawnSplash(
+                    Color.ray_white,
+                    self.snake.head().coord,
+                    24,
+                    500,
+                    0.04,
+                );
                 self.game_state = .evaluate;
             } else if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
                 self.combo = 0;
@@ -172,12 +183,20 @@ pub const State = struct {
                 self.game_state = .evaluate;
             } else {
                 self.scoring();
+                try self.splash_group.spawnSplash(
+                    self.fgColor(),
+                    self.snake.head().coord,
+                    5,
+                    500,
+                    0.05,
+                );
             }
             self.max_combo = @max(self.max_combo, self.combo);
             self.timer.reset();
             break;
         }
         self.grid.fill(.{ .char = self.grid.empty_char, .color = self.bgColor() });
+        self.splash_group.draw(&self.grid);
         self.snake.draw(&self.grid);
         self.food_group.draw(&self.grid);
     }
@@ -186,6 +205,7 @@ pub const State = struct {
         if (self.food_group.size() != 0) self.food_group.clear();
         try self.updateAndCollide();
         self.grid.fill(.{ .char = self.grid.empty_char, .color = self.bgColor() });
+        self.splash_group.draw(&self.grid);
         self.snake.draw(&self.grid);
         if (self.timer.read() < self.eval_time * std.time.ns_per_ms or self.game_state == .gameover) {
             return;
@@ -227,6 +247,7 @@ pub const State = struct {
     fn updateAndCollide(self: *State) !void {
         try self.input_queue.add(rl.getKeyPressed());
         self.snake.update(&self.input_queue);
+        try self.splash_group.update();
         if (self.snake.colliding(&self.grid)) {
             self.timer.reset();
             self.game_state = .gameover;
