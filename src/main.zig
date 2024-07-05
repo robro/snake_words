@@ -130,7 +130,7 @@ fn renderHUD(state: *State) void {
         getFont(.large),
         @ptrCast(state.targetDisplay()),
         .{
-            .x = (win_width / 2) - (target_width / 2) + (cell_size / 2) + partial_width,
+            .x = (win_width / 2) - (target_width / 2) + (cell_size / 2),
             .y = hud_y,
         },
         cell_size * 2,
