@@ -51,13 +51,13 @@ pub const Grid = struct {
         self.cells[@intFromFloat(coord.y)][@intFromFloat(coord.x)] = cell;
     }
 
-    pub fn fill(self: *Grid, cell: ?Cell) void {
+    pub fn fill(self: *Grid, color: ?Color) void {
         for (self.cells) |*row| {
             for (row.*) |*c| {
-                c.* = if (cell == null) .{
+                c.* = .{
                     .char = self.empty_char,
-                    .color = Color.blank,
-                } else cell.?;
+                    .color = if (color == null) Color.blank else color.?,
+                };
             }
         }
     }

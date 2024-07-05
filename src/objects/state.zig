@@ -153,7 +153,7 @@ pub const State = struct {
     }
 
     fn drawGameplay(self: *State) void {
-        self.grid.fill(.{ .char = self.grid.empty_char, .color = self.bgColor() });
+        self.grid.fill(self.bgColor());
         self.trail.draw(&self.grid);
         self.splash_group.draw(&self.grid);
         self.snake.draw(&self.grid);
