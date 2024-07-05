@@ -73,7 +73,7 @@ pub const State = struct {
     gameover_text: []const u8 = "udied",
     title_text: []const u8 = "start",
     target_word: []const u8 = undefined,
-    current_state: GameState = .title,
+    game_state: GameState = .title,
 
     pub fn init(
         ts_options: TSOptions,
@@ -129,7 +129,7 @@ pub const State = struct {
     }
 
     pub fn update(self: *State) !void {
-        try switch (self.current_state) {
+        try switch (self.game_state) {
             .title => self.title(),
             .starting => self.starting(),
             .seeking => self.seeking(),
@@ -139,7 +139,7 @@ pub const State = struct {
     }
 
     pub fn draw(self: *State) void {
-        switch (self.current_state) {
+        switch (self.game_state) {
             .title => self.drawTitle(),
             .starting => self.grid.fill(null),
             .gameover => self.drawGameover(),
@@ -174,7 +174,7 @@ pub const State = struct {
     }
 
     fn starting(self: *State) !void {
-        if (self.timer.read() > self.start_wait * std.time.ns_per_ms) {
+        if (!self.waiting(self.start_wait)) {
             try self.spawnFood(self.target_word, self.fgColor());
             self.setState(GameState.seeking);
         }
@@ -198,7 +198,6 @@ pub const State = struct {
                 self.setState(GameState.evaluate);
                 return;
             }
-            self.combo += 1;
             if (std.mem.eql(u8, self.target_word, self.partialWord())) {
                 try self.splash_group.spawnSplash(Color.ray_white, self.snake.head().coord, 24, 500, 0.04);
                 self.multiplier = @min(self.max_multiplier, self.multiplier * 2);
@@ -207,6 +206,7 @@ pub const State = struct {
             } else {
                 try self.splash_group.spawnSplash(self.fgColor(), self.snake.head().coord, 5, 350, 0.05);
             }
+            self.combo += 1;
             self.max_combo = @max(self.max_combo, self.combo);
             self.prev_score = self.score;
             self.score += 10 * self.multiplier;
@@ -222,7 +222,7 @@ pub const State = struct {
             self.setState(GameState.gameover);
             return;
         }
-        if (self.timer.read() > self.eval_time * std.time.ns_per_ms) {
+        if (!self.waiting(self.eval_time)) {
             self.setTailColor(if (self.combo > 0) Color.ray_white else Color.gray);
             self.partial_idx = self.snake.length();
             self.color_idx = (self.color_idx + 1) % colors.len;
@@ -233,25 +233,26 @@ pub const State = struct {
     }
 
     fn gameover(self: *State) !void {
-        self.combo = self.max_combo;
         for (self.food_group.food.items) |*food| {
             food.cell.char = util.randomChar();
         }
         for (self.snake.cells.items) |*cell| {
             cell.char = util.randomChar();
         }
-        if (self.timer.read() > self.gameover_wait * std.time.ns_per_ms and
-            rl.getKeyPressed() != .key_null)
-        {
+        if (!self.waiting(self.gameover_wait) and rl.getKeyPressed() != .key_null) {
             try self.reset();
             try self.spawnFood(self.target_word, self.fgColor());
             self.setState(GameState.seeking);
         }
     }
 
+    fn waiting(self: *State, wait_time_ms: usize) bool {
+        return self.timer.read() <= wait_time_ms * std.time.ns_per_ms;
+    }
+
     fn setState(self: *State, state: GameState) void {
         self.timer.reset();
-        self.current_state = state;
+        self.game_state = state;
     }
 
     fn updateBoard(self: *State) !void {
@@ -338,14 +339,14 @@ pub const State = struct {
     }
 
     pub fn partialLength(self: *State) usize {
-        switch (self.current_state) {
+        switch (self.game_state) {
             .title => return self.title_text.len - 1,
             else => return self.snake.length() - self.partial_idx,
         }
     }
 
     pub fn scoreDisplay(self: *State) f64 {
-        if (self.current_state == .gameover or self.score == self.prev_score) {
+        if (self.game_state == .gameover or self.score == self.prev_score) {
             return self.score;
         }
         return @floor(std.math.lerp(
@@ -375,7 +376,7 @@ pub const State = struct {
     }
 
     pub fn titleColor(self: *State) Color {
-        switch (self.current_state) {
+        switch (self.game_state) {
             .title => return Color.light_gray,
             .starting => return if (self.flashing()) Color.ray_white else Color.blank,
             else => return Color.blank,
@@ -383,7 +384,7 @@ pub const State = struct {
     }
 
     pub fn pointsColor(self: *State) Color {
-        switch (self.current_state) {
+        switch (self.game_state) {
             .seeking => return self.bgColor(),
             .evaluate => return self.bgColor(),
             .gameover => return self.bgColor(),
@@ -392,14 +393,14 @@ pub const State = struct {
     }
 
     pub fn targetColor(self: *State) Color {
-        switch (self.current_state) {
+        switch (self.game_state) {
             .seeking => return self.bgColor(),
             else => return Color.blank,
         }
     }
 
     pub fn partialColor(self: *State) Color {
-        switch (self.current_state) {
+        switch (self.game_state) {
             .seeking => return self.fgColor(),
             .evaluate => {
                 if (self.flashing()) {
@@ -413,14 +414,14 @@ pub const State = struct {
     }
 
     pub fn gameoverColor(self: *State) Color {
-        switch (self.current_state) {
+        switch (self.game_state) {
             .gameover => return if (self.blinking()) Color.black else Color.blank,
             else => return Color.blank,
         }
     }
 
     pub fn cursorColor(self: *State) Color {
-        switch (self.current_state) {
+        switch (self.game_state) {
             .title => return if (self.blinking()) Color.light_gray else Color.black,
             .seeking => return if (self.blinking()) self.fgColor() else Color.black,
             else => return Color.blank,
@@ -428,7 +429,7 @@ pub const State = struct {
     }
 
     pub fn multiplierColor(self: *State) Color {
-        switch (self.current_state) {
+        switch (self.game_state) {
             .seeking => return self.bgColor(),
             .evaluate => return if (self.multiplier > 1) self.fgColor() else self.bgColor(),
             .gameover => return self.bgColor(),
@@ -437,7 +438,7 @@ pub const State = struct {
     }
 
     pub fn evaluateColor(self: *State) Color {
-        switch (self.current_state) {
+        switch (self.game_state) {
             .evaluate => return if (self.combo == 0) self.bgColor() else Color.blank,
             .gameover => return self.bgColor(),
             else => return Color.blank,

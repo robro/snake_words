@@ -212,7 +212,11 @@ fn renderHUD(state: *State) void {
     // Combo
     rl.drawTextEx(
         getFont(.small),
-        std.fmt.bufPrintZ(scratch.scratchBuf(16), combo_fmt, .{state.combo}) catch unreachable,
+        std.fmt.bufPrintZ(
+            scratch.scratchBuf(16),
+            combo_fmt,
+            .{if (state.game_state == .gameover) state.max_combo else state.combo},
+        ) catch unreachable,
         .{
             .x = cell_size + cell_size / 8,
             .y = win_height - cell_size * 1.5,
