@@ -168,7 +168,14 @@ pub const SplashGroup = struct {
         lifetime: u64,
         tick: f64,
     ) !void {
-        try self.splashes.append(try Splash.init(color, coord, max_size, lifetime, tick, self.alloc));
+        try self.splashes.append(try Splash.init(
+            color,
+            coord,
+            max_size,
+            lifetime,
+            tick,
+            self.alloc,
+        ));
     }
 
     pub fn update(self: *SplashGroup) !void {

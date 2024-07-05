@@ -14,7 +14,7 @@ const Cell = @import("grid.zig").Cell;
 const FoodGroup = @import("food.zig").FoodGroup;
 const FoodGroupOptions = @import("food.zig").FoodGroupOptions;
 const Food = @import("food.zig").Food;
-const SplashGroup = @import("splash.zig").SplashGroup;
+const SplashGroup = @import("particle.zig").SplashGroup;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const Timer = std.time.Timer;
@@ -187,7 +187,7 @@ pub const State = struct {
                     self.fgColor(),
                     self.snake.head().coord,
                     5,
-                    500,
+                    350,
                     0.05,
                 );
             }

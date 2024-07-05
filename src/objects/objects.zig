@@ -3,4 +3,4 @@ pub const food = @import("food.zig");
 pub const grid = @import("grid.zig");
 pub const state = @import("state.zig");
 pub const title = @import("title.zig");
-pub const splash = @import("splash.zig");
+pub const particle = @import("particle.zig");
