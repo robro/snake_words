@@ -68,21 +68,7 @@ pub const Trail = struct {
     }
 
     pub fn draw(self: *Trail, grid: *Grid) void {
-        for (self.particles.items) |*p| {
-            if (p.coord.x < 0 or p.coord.y < 0 or
-                p.coord.x >= @as(f32, @floatFromInt(grid.getCols())) or
-                p.coord.y >= @as(f32, @floatFromInt(grid.getCols())))
-            {
-                continue;
-            }
-            const x: usize = @intFromFloat(p.coord.x);
-            const y: usize = @intFromFloat(p.coord.y);
-            const grid_color = grid.cells[y][x].color;
-            const r: u8 = @min(255, @as(u16, p.color().r) + grid_color.r);
-            const g: u8 = @min(255, @as(u16, p.color().g) + grid_color.g);
-            const b: u8 = @min(255, @as(u16, p.color().b) + grid_color.b);
-            grid.cells[y][x].color = Color.init(r, g, b, grid_color.a);
-        }
+        return drawParticles(&self.particles, grid);
     }
 };
 
@@ -178,21 +164,7 @@ pub const Splash = struct {
     }
 
     pub fn draw(self: *Splash, grid: *Grid) void {
-        for (self.particles.items) |*p| {
-            if (p.coord.x < 0 or p.coord.y < 0 or
-                p.coord.x >= @as(f32, @floatFromInt(grid.getCols())) or
-                p.coord.y >= @as(f32, @floatFromInt(grid.getCols())))
-            {
-                continue;
-            }
-            const x: usize = @intFromFloat(p.coord.x);
-            const y: usize = @intFromFloat(p.coord.y);
-            const grid_color = grid.cells[y][x].color;
-            const r: u8 = @min(255, @as(u16, p.color().r) + grid_color.r);
-            const g: u8 = @min(255, @as(u16, p.color().g) + grid_color.g);
-            const b: u8 = @min(255, @as(u16, p.color().b) + grid_color.b);
-            grid.cells[y][x].color = Color.init(r, g, b, grid_color.a);
-        }
+        return drawParticles(&self.particles, grid);
     }
 };
 
@@ -254,4 +226,22 @@ pub fn lerpColor(src_color: Color, current: u64, limit: u64) Color {
         @as(u8, @intFromFloat(@as(f64, @floatFromInt(src_color.b)) * lerp)),
         src_color.a,
     );
+}
+
+pub fn drawParticles(particles: *ArrayList(Particle), grid: *Grid) void {
+    for (particles.items) |*p| {
+        if (p.coord.x < 0 or p.coord.y < 0 or
+            p.coord.x >= @as(f32, @floatFromInt(grid.getCols())) or
+            p.coord.y >= @as(f32, @floatFromInt(grid.getCols())))
+        {
+            continue;
+        }
+        const x: usize = @intFromFloat(p.coord.x);
+        const y: usize = @intFromFloat(p.coord.y);
+        const grid_color = grid.cells[y][x].color;
+        const r: u8 = @min(255, @as(u16, p.color().r) + grid_color.r);
+        const g: u8 = @min(255, @as(u16, p.color().g) + grid_color.g);
+        const b: u8 = @min(255, @as(u16, p.color().b) + grid_color.b);
+        grid.cells[y][x].color = Color.init(r, g, b, grid_color.a);
+    }
 }
