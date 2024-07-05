@@ -193,36 +193,27 @@ pub const State = struct {
                 continue;
             }
             try self.snake.append(self.food_group.pop(i).cell);
-            self.combo += 1;
-            if (std.mem.eql(u8, self.target_word, self.partialWord())) {
-                self.multiplier = @min(self.max_multiplier, self.multiplier * 2);
-                self.scoring();
-                try self.splash_group.spawnSplash(
-                    Color.ray_white,
-                    self.snake.head().coord,
-                    24,
-                    500,
-                    0.04,
-                );
-                self.food_group.clear();
-                self.current_state = .evaluate;
-            } else if (std.mem.startsWith(u8, self.target_word, self.partialWord())) {
-                self.scoring();
-                try self.splash_group.spawnSplash(
-                    self.fgColor(),
-                    self.snake.head().coord,
-                    5,
-                    350,
-                    0.05,
-                );
-            } else {
+            self.timer.reset();
+            if (!std.mem.startsWith(u8, self.target_word, self.partialWord())) {
                 self.combo = 0;
                 self.multiplier = 1;
                 self.food_group.clear();
                 self.current_state = .evaluate;
+                return;
+            }
+            self.combo += 1;
+            if (std.mem.eql(u8, self.target_word, self.partialWord())) {
+                try self.splash_group.spawnSplash(Color.ray_white, self.snake.head().coord, 24, 500, 0.04);
+                self.multiplier = @min(self.max_multiplier, self.multiplier * 2);
+                self.food_group.clear();
+                self.current_state = .evaluate;
+            } else {
+                try self.splash_group.spawnSplash(self.fgColor(), self.snake.head().coord, 5, 350, 0.05);
             }
             self.max_combo = @max(self.max_combo, self.combo);
-            self.timer.reset();
+            self.prev_score = self.score;
+            self.score += 10 * self.multiplier;
+            self.score_time = rl.getTime();
             return;
         }
     }
@@ -271,12 +262,6 @@ pub const State = struct {
         }
         try self.trail.update();
         try self.splash_group.update();
-    }
-
-    fn scoring(self: *State) void {
-        self.prev_score = self.score;
-        self.score += 10 * self.multiplier;
-        self.score_time = rl.getTime();
     }
 
     pub fn spawnFood(self: *State, chars: []const u8, color: Color) !void {

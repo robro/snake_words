@@ -15,7 +15,7 @@ pub const Food = struct {
     cell: Cell,
     coord: Vector2,
     timer: Timer,
-    wait_time_ms: u32 = 500,
+    wait_time_ms: usize = 500,
 
     pub fn init(cell: Cell, coord: Vector2) !Food {
         return Food{
