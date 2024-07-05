@@ -21,14 +21,6 @@ const getFont = engine.render.getFont;
 const monoText = engine.render.monoText;
 const renderGrid = engine.render.renderGrid;
 
-// TODO:
-//  Add visual flair to grid action
-//  ✅ Make font look better at different sizes
-//  ✅ Handle different sized words elegantly
-//  ✅ Fix scrambled letter regression
-//  ✅ Make score tally up (tween)
-//  ✅ Add title screen
-
 const title = "snake_words";
 
 // Dimensions
@@ -124,7 +116,7 @@ pub fn main() !void {
         rl.clearBackground(bg_color);
         renderGrid(&state.grid, rl.Vector2.zero(), cell_size, .small);
         renderHUD(&state);
-        rl.drawFPS(win_width - 30, 0);
+        // rl.drawFPS(win_width - 30, 0);
     }
 }
 

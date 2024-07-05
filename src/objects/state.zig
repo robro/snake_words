@@ -14,6 +14,7 @@ const Cell = @import("grid.zig").Cell;
 const FoodGroup = @import("food.zig").FoodGroup;
 const FoodGroupOptions = @import("food.zig").FoodGroupOptions;
 const Food = @import("food.zig").Food;
+const Trail = @import("particle.zig").Trail;
 const SplashGroup = @import("particle.zig").SplashGroup;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
@@ -45,6 +46,7 @@ pub const State = struct {
     snake: Snake,
     food_group: FoodGroup,
     splash_group: SplashGroup,
+    trail: Trail,
     ts_options: TSOptions,
     grid_options: GridOptions,
     snake_options: SnakeOptions,
@@ -87,6 +89,7 @@ pub const State = struct {
             .snake = try Snake.init(snake_options),
             .food_group = FoodGroup.init(food_group_options),
             .splash_group = SplashGroup.init(alloc),
+            .trail = Trail.init(Color.light_gray, Vector2.zero(), 1000, alloc),
             .ts_options = ts_options,
             .grid_options = grid_options,
             .snake_options = snake_options,
@@ -110,6 +113,7 @@ pub const State = struct {
         self.snake.deinit();
         self.food_group.deinit();
         self.splash_group.deinit();
+        self.trail.deinit();
         self.input_queue.deinit();
         self.alloc.free(self.word_indices);
     }
@@ -196,6 +200,7 @@ pub const State = struct {
             break;
         }
         self.grid.fill(.{ .char = self.grid.empty_char, .color = self.bgColor() });
+        self.trail.draw(&self.grid);
         self.splash_group.draw(&self.grid);
         self.snake.draw(&self.grid);
         self.food_group.draw(&self.grid);
@@ -205,6 +210,7 @@ pub const State = struct {
         if (self.food_group.size() != 0) self.food_group.clear();
         try self.updateAndCollide();
         self.grid.fill(.{ .char = self.grid.empty_char, .color = self.bgColor() });
+        self.trail.draw(&self.grid);
         self.splash_group.draw(&self.grid);
         self.snake.draw(&self.grid);
         if (self.timer.read() < self.eval_time * std.time.ns_per_ms or self.game_state == .gameover) {
@@ -239,14 +245,19 @@ pub const State = struct {
             return;
         }
         try self.reset();
-        // try self.spawnFood(self.target_word, self.fgColor());
-        // self.game_state = .seeking;
-        self.game_state = .title;
+        try self.spawnFood(self.target_word, self.fgColor());
+        self.game_state = .seeking;
+        // self.game_state = .title;
     }
 
     fn updateAndCollide(self: *State) !void {
         try self.input_queue.add(rl.getKeyPressed());
         self.snake.update(&self.input_queue);
+        self.trail.coord = self.snake.tail.?.coord;
+        for (self.trail.particles.items) |*p| {
+            p.src_color = self.fgColor();
+        }
+        try self.trail.update();
         try self.splash_group.update();
         if (self.snake.colliding(&self.grid)) {
             self.timer.reset();

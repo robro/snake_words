@@ -11,7 +11,7 @@ const Allocator = std.mem.Allocator;
 const Grid = @import("grid.zig").Grid;
 
 const Particle = struct {
-    start_color: Color,
+    src_color: Color,
     coord: Vector2,
     timer: Timer,
     lifetime: u64, // ms
@@ -19,7 +19,7 @@ const Particle = struct {
     pub fn init(start_color: Color, coord: Vector2, lifetime: u64) !Particle {
         util.assert(lifetime > 0, "lifetime must be greater than zero!", .{});
         return Particle{
-            .start_color = start_color,
+            .src_color = start_color,
             .coord = coord,
             .timer = try Timer.start(),
             .lifetime = lifetime,
@@ -31,7 +31,57 @@ const Particle = struct {
     }
 
     pub fn color(self: *Particle) Color {
-        return lerpColor(self.start_color, self.timer.read(), self.lifetime * std.time.ns_per_ms);
+        return lerpColor(self.src_color, self.timer.read(), self.lifetime * std.time.ns_per_ms);
+    }
+};
+
+pub const Trail = struct {
+    particles: ArrayList(Particle),
+    color: Color,
+    coord: Vector2,
+    last_coord: Vector2,
+    lifetime: u64, // ms
+
+    pub fn init(color: Color, coord: Vector2, lifetime: u64, alloc: Allocator) Trail {
+        return Trail{
+            .particles = ArrayList(Particle).init(alloc),
+            .color = color,
+            .coord = coord,
+            .last_coord = coord,
+            .lifetime = lifetime,
+        };
+    }
+
+    pub fn deinit(self: *Trail) void {
+        self.particles.deinit();
+    }
+
+    pub fn update(self: *Trail) !void {
+        while (self.particles.items.len > 0 and self.particles.items[0].finished()) {
+            _ = self.particles.orderedRemove(0);
+        }
+        if (self.last_coord.equals(self.coord) == 0) {
+            self.last_coord = self.coord;
+            try self.particles.append(try Particle.init(self.color, self.last_coord, self.lifetime));
+        }
+    }
+
+    pub fn draw(self: *Trail, grid: *Grid) void {
+        for (self.particles.items) |*p| {
+            if (p.coord.x < 0 or p.coord.y < 0 or
+                p.coord.x >= @as(f32, @floatFromInt(grid.getCols())) or
+                p.coord.y >= @as(f32, @floatFromInt(grid.getCols())))
+            {
+                continue;
+            }
+            const x: usize = @intFromFloat(p.coord.x);
+            const y: usize = @intFromFloat(p.coord.y);
+            const grid_color = grid.cells[y][x].color;
+            const r: u8 = @min(255, @as(u16, p.color().r) + grid_color.r);
+            const g: u8 = @min(255, @as(u16, p.color().g) + grid_color.g);
+            const b: u8 = @min(255, @as(u16, p.color().b) + grid_color.b);
+            grid.cells[y][x].color = Color.init(r, g, b, grid_color.a);
+        }
     }
 };
 
@@ -44,7 +94,6 @@ pub const Splash = struct {
     max_size: usize,
     lifetime: u64, // ms
     tick: f64, // seconds
-    alloc: Allocator,
     last_tick: f64 = 0,
     size: usize = 1,
 
@@ -73,7 +122,6 @@ pub const Splash = struct {
             .max_size = max_size,
             .lifetime = lifetime,
             .tick = tick,
-            .alloc = alloc,
         };
         try splash.queue.append(.{ .num = 0, .coord = coord });
         try splash.visited.append(coord);
@@ -121,10 +169,6 @@ pub const Splash = struct {
     pub fn finished(self: *Splash) bool {
         return self.size >= self.max_size and self.particles.items.len == 0;
     }
-
-    // pub fn color(self: *Splash) Color {
-    //     return lerpColor(self.start_color, self.size, self.max_size);
-    // }
 
     pub fn draw(self: *Splash, grid: *Grid) void {
         for (self.particles.items) |*p| {
