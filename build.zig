@@ -61,16 +61,21 @@ pub fn build(b: *std.Build) void {
     const scratch = b.addModule("scratch", .{
         .root_source_file = b.path("src/scratch/scratch.zig"),
     });
+    const math = b.addModule("math", .{
+        .root_source_file = b.path("src/math/math.zig"),
+    });
 
     exe.root_module.addImport("engine", engine);
     engine.addImport("raylib", raylib);
     engine.addImport("objects", objects);
+    engine.addImport("math", math);
 
     exe.root_module.addImport("objects", objects);
     objects.addImport("raylib", raylib);
     objects.addImport("engine", engine);
     objects.addImport("util", util);
     objects.addImport("scratch", scratch);
+    objects.addImport("math", math);
 
     exe.root_module.addImport("util", util);
     exe.root_module.addImport("scratch", scratch);
