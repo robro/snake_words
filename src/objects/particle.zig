@@ -2,6 +2,7 @@ const std = @import("std");
 const rl = @import("raylib");
 const util = @import("util");
 
+const Rectangle = rl.Rectangle;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const Color = rl.Color;
@@ -128,7 +129,7 @@ pub const Splash = struct {
         self.visited.deinit();
     }
 
-    pub fn update(self: *Splash, grid: *Grid) !void {
+    pub fn update(self: *Splash, bounds: Rectangle) !void {
         defer while (self.particles.items.len > 0 and self.particles.items[0].finished()) {
             _ = self.particles.orderedRemove(0);
             self.finished_count += 1;
@@ -150,9 +151,7 @@ pub const Splash = struct {
             try self.particles.append(try Particle.init(self.color, num_vec.coord, self.lifetime));
             outer: for (offsets) |offset| {
                 const next_coord = num_vec.coord.add(offset);
-                if (next_coord.x < 0 or next_coord.x >= @as(f32, @floatFromInt(grid.getCols())) or
-                    next_coord.y < 0 or next_coord.y >= @as(f32, @floatFromInt(grid.getRows())))
-                {
+                if (!rl.checkCollisionPointRec(next_coord, bounds)) {
                     continue;
                 }
                 for (self.visited.items) |*coord| {
@@ -201,9 +200,9 @@ pub const SplashGroup = struct {
         ));
     }
 
-    pub fn update(self: *SplashGroup, grid: *Grid) !void {
+    pub fn update(self: *SplashGroup, bounds: Rectangle) !void {
         for (self.splashes.items) |*splash| {
-            try splash.update(grid);
+            try splash.update(bounds);
         }
         var i: usize = self.splashes.items.len;
         while (i > 0) {

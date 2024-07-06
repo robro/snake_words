@@ -7,12 +7,12 @@ const scratch = @import("scratch");
 
 const Color = rl.Color;
 const Vector2 = rl.Vector2;
+const Rectangle = rl.Rectangle;
 const Allocator = std.mem.Allocator;
 const Facing = objects.snake.Facing;
-const TSOptions = objects.title.TSOptions;
+const TitleSnakeOptions = objects.title.TitleSnakeOptions;
 const GridOptions = objects.grid.GridOptions;
 const SnakeOptions = objects.snake.SnakeOptions;
-const FoodGroupOptions = objects.food.FoodGroupOptions;
 const State = objects.state.State;
 const FontSize = engine.render.FontSize;
 
@@ -47,6 +47,7 @@ const multi_fmt = "x{d}";
 // Snake defaults
 const snake_text = "snake";
 const snake_color = Color.ray_white;
+const title_snake_color = Color.ray_white;
 const snake_tick = 0.125;
 const snake_coord = Vector2{ .x = grid_cols - 4, .y = grid_rows / 2 };
 const snake_facing = Facing.left;
@@ -72,7 +73,10 @@ pub fn main() !void {
         if (deinit_status == .leak) @panic("gpa leaked!");
     }
 
-    const ts_options = TSOptions{
+    const bounds = Rectangle.init(0, 0, grid_cols, grid_rows);
+
+    const title_snake_options = TitleSnakeOptions{
+        .color = title_snake_color,
         .rows = grid_rows,
         .cols = grid_cols,
         .tick = snake_tick,
@@ -92,15 +96,12 @@ pub fn main() !void {
         .facing = snake_facing,
         .alloc = alloc,
     };
-    const food_group_options = FoodGroupOptions{
-        .alloc = alloc,
-    };
 
     var state = try State.init(
-        ts_options,
+        title_snake_options,
         grid_options,
         snake_options,
-        food_group_options,
+        bounds,
         alloc,
     );
     defer state.deinit();

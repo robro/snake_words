@@ -1,13 +1,16 @@
 const std = @import("std");
 const rl = @import("raylib");
 const engine = @import("engine");
+const util = @import("util");
 
+const Rectangle = rl.Rectangle;
 const Grid = @import("grid.zig").Grid;
 const Cell = @import("grid.zig").Cell;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Vector2 = rl.Vector2;
 const InputQueue = engine.input.InputQueue;
+const assert = util.assert;
 
 pub const Facing = enum {
     up,
@@ -91,6 +94,7 @@ pub const Snake = struct {
     }
 
     pub fn append(self: *Snake, cell: Cell) !void {
+        assert(self.tail != null, "snake got no tail!", .{});
         try self.parts.append(self.tail.?);
         try self.cells.append(cell);
     }
@@ -101,10 +105,8 @@ pub const Snake = struct {
         }
     }
 
-    pub fn colliding(self: *Snake, grid: *Grid) bool {
-        if (self.x() < 0 or self.x() >= @as(f32, @floatFromInt(grid.getCols())) or
-            self.y() < 0 or self.y() >= @as(f32, @floatFromInt(grid.getRows())))
-        {
+    pub fn colliding(self: *Snake, bounds: Rectangle) bool {
+        if (!rl.checkCollisionPointRec(self.head().coord, bounds)) {
             return true;
         }
         for (self.parts.items[1..]) |*part| {
@@ -121,13 +123,5 @@ pub const Snake = struct {
 
     pub fn length(self: *Snake) usize {
         return self.cells.items.len;
-    }
-
-    pub fn x(self: *Snake) f32 {
-        return self.head().coord.x;
-    }
-
-    pub fn y(self: *Snake) f32 {
-        return self.head().coord.y;
     }
 };

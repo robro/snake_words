@@ -12,14 +12,8 @@ const Allocator = std.mem.Allocator;
 const assert = @import("util").assert;
 const expect = std.testing.expect;
 
-const color = Color.ray_white;
-
-const TSPart = struct {
-    cell: Cell,
-    coord: Vector2,
-};
-
-pub const TSOptions = struct {
+pub const TitleSnakeOptions = struct {
+    color: Color,
     cols: usize,
     rows: usize,
     tick: f64,
@@ -27,12 +21,13 @@ pub const TSOptions = struct {
 };
 
 pub const TitleSnake = struct {
+    color: Color,
     cells: ArrayList(Cell),
     coords: ArrayList(Vector2),
     tick: f64,
-    last_tick: f64 = 0,
+    last_tick: ?f64 = null,
 
-    pub fn init(options: TSOptions) !TitleSnake {
+    pub fn init(options: TitleSnakeOptions) !TitleSnake {
         assert(
             options.cols >= 2 and options.rows >= 2 and options.rows % 2 == 0,
             "invalid dimensions!",
@@ -40,6 +35,7 @@ pub const TitleSnake = struct {
         );
 
         var ts = TitleSnake{
+            .color = options.color,
             .cells = ArrayList(Cell).init(options.alloc),
             .coords = ArrayList(Vector2).init(options.alloc),
             .tick = options.tick,
@@ -56,7 +52,7 @@ pub const TitleSnake = struct {
                 turn_wait = turn_wait - 1;
             }
             if (text_idx < text.len) {
-                try ts.cells.append(.{ .char = text[text_idx], .color = color });
+                try ts.cells.append(.{ .char = text[text_idx], .color = ts.color });
             }
             try ts.coords.append(coord);
 
@@ -121,7 +117,7 @@ pub const TitleSnake = struct {
 
     pub fn update(self: *TitleSnake) !void {
         const time = rl.getTime();
-        if (time < self.last_tick + self.tick) {
+        if (self.last_tick != null and time < self.last_tick.? + self.tick) {
             return;
         }
         self.last_tick = time;

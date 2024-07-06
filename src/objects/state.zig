@@ -4,15 +4,15 @@ const util = @import("util");
 const scratch = @import("scratch");
 const engine = @import("engine");
 
+const Rectangle = rl.Rectangle;
 const TitleSnake = @import("title.zig").TitleSnake;
-const TSOptions = @import("title.zig").TSOptions;
+const TitleSnakeOptions = @import("title.zig").TitleSnakeOptions;
 const Snake = @import("snake.zig").Snake;
 const SnakeOptions = @import("snake.zig").SnakeOptions;
 const Grid = @import("grid.zig").Grid;
 const GridOptions = @import("grid.zig").GridOptions;
 const Cell = @import("grid.zig").Cell;
 const FoodGroup = @import("food.zig").FoodGroup;
-const FoodGroupOptions = @import("food.zig").FoodGroupOptions;
 const Food = @import("food.zig").Food;
 const Trail = @import("particle.zig").Trail;
 const SplashGroup = @import("particle.zig").SplashGroup;
@@ -47,11 +47,11 @@ pub const State = struct {
     snake: Snake,
     food_group: FoodGroup,
     splash_group: SplashGroup,
+    bounds: Rectangle,
     trail: Trail,
-    ts_options: TSOptions,
+    title_snake_options: TitleSnakeOptions,
     grid_options: GridOptions,
     snake_options: SnakeOptions,
-    food_group_options: FoodGroupOptions,
     word_indices: []usize,
     partial_idx: usize,
     alloc: Allocator,
@@ -88,23 +88,23 @@ pub const State = struct {
     },
 
     pub fn init(
-        ts_options: TSOptions,
+        title_snake_options: TitleSnakeOptions,
         grid_options: GridOptions,
         snake_options: SnakeOptions,
-        food_group_options: FoodGroupOptions,
+        bounds: Rectangle,
         alloc: Allocator,
     ) !State {
         var state = State{
-            .title_snake = try TitleSnake.init(ts_options),
+            .title_snake = try TitleSnake.init(title_snake_options),
             .grid = try Grid.init(grid_options),
             .snake = try Snake.init(snake_options),
-            .food_group = FoodGroup.init(food_group_options),
+            .food_group = FoodGroup.init(alloc),
             .splash_group = SplashGroup.init(alloc),
+            .bounds = bounds,
             .trail = undefined,
-            .ts_options = ts_options,
+            .title_snake_options = title_snake_options,
             .grid_options = grid_options,
             .snake_options = snake_options,
-            .food_group_options = food_group_options,
             .word_indices = try alloc.alloc(usize, util.words.len),
             .partial_idx = snake_options.text.len,
             .alloc = alloc,
@@ -133,10 +133,10 @@ pub const State = struct {
     pub fn reset(self: *State) !void {
         self.deinit();
         self.* = try State.init(
-            self.ts_options,
+            self.title_snake_options,
             self.grid_options,
             self.snake_options,
-            self.food_group_options,
+            self.bounds,
             self.alloc,
         );
     }
@@ -195,7 +195,7 @@ pub const State = struct {
 
     fn seeking(self: *State) !void {
         try self.updateBoard();
-        if (self.snake.colliding(&self.grid)) {
+        if (self.snake.colliding(self.bounds)) {
             self.setState(GameState.gameover);
             return;
         }
@@ -231,7 +231,7 @@ pub const State = struct {
 
     fn evaluate(self: *State) !void {
         try self.updateBoard();
-        if (self.snake.colliding(&self.grid)) {
+        if (self.snake.colliding(self.bounds)) {
             self.setState(GameState.gameover);
             return;
         }
@@ -276,7 +276,7 @@ pub const State = struct {
             p.src_color = self.fgColor();
         }
         try self.trail.update();
-        try self.splash_group.update(&self.grid);
+        try self.splash_group.update(self.bounds);
     }
 
     fn spawnFood(self: *State, chars: []const u8, color: Color) !void {

@@ -38,15 +38,11 @@ pub const Food = struct {
     }
 };
 
-pub const FoodGroupOptions = struct {
-    alloc: Allocator,
-};
-
 pub const FoodGroup = struct {
     food: ArrayList(Food),
 
-    pub fn init(options: FoodGroupOptions) FoodGroup {
-        return FoodGroup{ .food = ArrayList(Food).init(options.alloc) };
+    pub fn init(alloc: Allocator) FoodGroup {
+        return FoodGroup{ .food = ArrayList(Food).init(alloc) };
     }
 
     pub fn deinit(self: *FoodGroup) void {
