@@ -1,14 +1,14 @@
 const std = @import("std");
 const rl = @import("raylib");
-const objects = @import("objects");
+const object = @import("object");
 const util = @import("util");
 const math = @import("math");
 
 const ArrayList = std.ArrayList;
 const Vector2 = rl.Vector2;
 const Vec2 = math.Vec2;
-const Grid = objects.grid.Grid;
-const State = objects.state.State;
+const Grid = object.grid.Grid;
+const State = object.state.State;
 const Font = rl.Font;
 const Color = rl.Color;
 const assert = util.assert;

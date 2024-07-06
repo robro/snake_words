@@ -52,8 +52,8 @@ pub fn build(b: *std.Build) void {
     const engine = b.addModule("engine", .{
         .root_source_file = b.path("src/engine/engine.zig"),
     });
-    const objects = b.addModule("objects", .{
-        .root_source_file = b.path("src/objects/objects.zig"),
+    const object = b.addModule("object", .{
+        .root_source_file = b.path("src/object/object.zig"),
     });
     const util = b.addModule("util", .{
         .root_source_file = b.path("src/util/util.zig"),
@@ -67,15 +67,15 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("engine", engine);
     engine.addImport("raylib", raylib);
-    engine.addImport("objects", objects);
+    engine.addImport("object", object);
     engine.addImport("math", math);
 
-    exe.root_module.addImport("objects", objects);
-    objects.addImport("raylib", raylib);
-    objects.addImport("engine", engine);
-    objects.addImport("util", util);
-    objects.addImport("scratch", scratch);
-    objects.addImport("math", math);
+    exe.root_module.addImport("object", object);
+    object.addImport("raylib", raylib);
+    object.addImport("engine", engine);
+    object.addImport("util", util);
+    object.addImport("scratch", scratch);
+    object.addImport("math", math);
 
     exe.root_module.addImport("util", util);
     exe.root_module.addImport("scratch", scratch);

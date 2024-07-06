@@ -1,7 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const engine = @import("engine");
-const objects = @import("objects");
+const object = @import("object");
 const util = @import("util");
 const scratch = @import("scratch");
 const math = @import("math");
@@ -11,12 +11,12 @@ const Vec2 = math.Vec2;
 const Range2 = math.Range2;
 const Vector2 = rl.Vector2;
 const Allocator = std.mem.Allocator;
-const Facing = objects.snake.Facing;
-const TitleSnakeOptions = objects.title.TitleSnakeOptions;
-const Grid = objects.grid.Grid;
-const GridOptions = objects.grid.GridOptions;
-const SnakeOptions = objects.snake.SnakeOptions;
-const State = objects.state.State;
+const Facing = object.snake.Facing;
+const TitleSnakeOptions = object.title.TitleSnakeOptions;
+const Grid = object.grid.Grid;
+const GridOptions = object.grid.GridOptions;
+const SnakeOptions = object.snake.SnakeOptions;
+const State = object.state.State;
 const FontSize = engine.render.FontSize;
 
 const setFont = engine.render.setFont;
