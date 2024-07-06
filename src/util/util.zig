@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const Timer = std.time.Timer;
+
 pub fn assert(ok: bool, comptime fmt: []const u8, args: anytype) void {
     if (!ok) {
         std.debug.print("assert failed: " ++ fmt ++ "\n", args);
@@ -9,6 +11,20 @@ pub fn assert(ok: bool, comptime fmt: []const u8, args: anytype) void {
 
 pub fn randomChar() u8 {
     return std.crypto.random.uintLessThan(u8, 26) + 97;
+}
+
+pub fn flashing(timer: *Timer) bool {
+    if (timer.read() / 75_000_000 % 2 == 0) {
+        return true;
+    }
+    return false;
+}
+
+pub fn blinking(timer: *Timer) bool {
+    if (timer.read() / 400_000_000 % 2 == 0) {
+        return true;
+    }
+    return false;
 }
 
 pub const words: []const []const u8 = &.{

@@ -5,13 +5,11 @@ const scratch = @import("scratch");
 const engine = @import("engine");
 
 const Rectangle = rl.Rectangle;
+const Drawable = engine.render.Drawable;
 const TitleSnake = @import("title.zig").TitleSnake;
 const TitleSnakeOptions = @import("title.zig").TitleSnakeOptions;
 const Snake = @import("snake.zig").Snake;
 const SnakeOptions = @import("snake.zig").SnakeOptions;
-const Grid = @import("grid.zig").Grid;
-const GridOptions = @import("grid.zig").GridOptions;
-const Cell = @import("grid.zig").Cell;
 const FoodGroup = @import("food.zig").FoodGroup;
 const Food = @import("food.zig").Food;
 const Trail = @import("particle.zig").Trail;
@@ -42,15 +40,14 @@ const colors = [_][2]Color{
 };
 
 pub const State = struct {
+    drawables: ArrayList(Drawable),
     title_snake: TitleSnake,
-    grid: Grid,
     snake: Snake,
     food_group: FoodGroup,
     splash_group: SplashGroup,
     bounds: Rectangle,
     trail: Trail,
     title_snake_options: TitleSnakeOptions,
-    grid_options: GridOptions,
     snake_options: SnakeOptions,
     word_indices: []usize,
     partial_idx: usize,
@@ -89,21 +86,19 @@ pub const State = struct {
 
     pub fn init(
         title_snake_options: TitleSnakeOptions,
-        grid_options: GridOptions,
         snake_options: SnakeOptions,
         bounds: Rectangle,
         alloc: Allocator,
     ) !State {
         var state = State{
+            .drawables = ArrayList(Drawable).init(alloc),
             .title_snake = try TitleSnake.init(title_snake_options),
-            .grid = try Grid.init(grid_options),
             .snake = try Snake.init(snake_options),
             .food_group = FoodGroup.init(alloc),
             .splash_group = SplashGroup.init(alloc),
             .bounds = bounds,
             .trail = undefined,
             .title_snake_options = title_snake_options,
-            .grid_options = grid_options,
             .snake_options = snake_options,
             .word_indices = try alloc.alloc(usize, util.words.len),
             .partial_idx = snake_options.text.len,
@@ -120,8 +115,8 @@ pub const State = struct {
     }
 
     pub fn deinit(self: *State) void {
+        self.drawables.deinit();
         self.title_snake.deinit();
-        self.grid.deinit();
         self.snake.deinit();
         self.food_group.deinit();
         self.splash_group.deinit();
@@ -134,7 +129,6 @@ pub const State = struct {
         self.deinit();
         self.* = try State.init(
             self.title_snake_options,
-            self.grid_options,
             self.snake_options,
             self.bounds,
             self.alloc,
@@ -142,6 +136,7 @@ pub const State = struct {
     }
 
     pub fn update(self: *State) !void {
+        try self.updateDrawables();
         try switch (self.game_state) {
             .title => self.title(),
             .starting => self.starting(),
@@ -149,34 +144,6 @@ pub const State = struct {
             .evaluate => self.evaluate(),
             .gameover => self.gameover(),
         };
-    }
-
-    pub fn draw(self: *State) void {
-        switch (self.game_state) {
-            .title => self.drawTitle(),
-            .starting => self.grid.fill(null),
-            .gameover => self.drawGameover(),
-            else => self.drawGameplay(),
-        }
-    }
-
-    fn drawTitle(self: *State) void {
-        self.grid.fill(null);
-        self.title_snake.draw(&self.grid);
-    }
-
-    fn drawGameplay(self: *State) void {
-        self.grid.fill(self.bgColor());
-        self.trail.draw(&self.grid);
-        self.splash_group.draw(&self.grid);
-        self.snake.draw(&self.grid);
-        self.food_group.draw(&self.grid);
-    }
-
-    fn drawGameover(self: *State) void {
-        self.grid.fill(null);
-        self.snake.draw(&self.grid);
-        self.food_group.draw(&self.grid);
     }
 
     fn title(self: *State) !void {
@@ -259,12 +226,41 @@ pub const State = struct {
         }
     }
 
+    fn updateDrawables(self: *State) !void {
+        if (self.drawables.items.len > 0) {
+            return;
+        }
+        switch (self.game_state) {
+            .title => {
+                try self.drawables.append(Drawable.init(&self.title_snake));
+            },
+            .seeking => {
+                try self.drawables.append(Drawable.init(&self.trail));
+                try self.drawables.append(Drawable.init(&self.splash_group));
+                try self.drawables.append(Drawable.init(&self.snake));
+                try self.drawables.append(Drawable.init(&self.food_group));
+            },
+            .evaluate => {
+                try self.drawables.append(Drawable.init(&self.trail));
+                try self.drawables.append(Drawable.init(&self.splash_group));
+                try self.drawables.append(Drawable.init(&self.snake));
+                try self.drawables.append(Drawable.init(&self.food_group));
+            },
+            .gameover => {
+                try self.drawables.append(Drawable.init(&self.snake));
+                try self.drawables.append(Drawable.init(&self.food_group));
+            },
+            else => return,
+        }
+    }
+
     fn waiting(self: *State, wait_time_ms: usize) bool {
         return self.timer.read() <= wait_time_ms * std.time.ns_per_ms;
     }
 
     fn setState(self: *State, state: GameState) void {
         self.timer.reset();
+        self.drawables.clearAndFree();
         self.game_state = state;
     }
 
@@ -281,10 +277,12 @@ pub const State = struct {
 
     fn spawnFood(self: *State, chars: []const u8, color: Color) !void {
         for (chars) |char| {
-            const cell: Cell = .{ .char = char, .color = color };
             const coord = self.getFreeCoord();
             if (coord != null) {
-                try self.food_group.add(try Food.init(cell, coord.?));
+                try self.food_group.add(try Food.init(
+                    .{ .char = char, .color = color },
+                    coord.?,
+                ));
             }
         }
     }
@@ -302,13 +300,14 @@ pub const State = struct {
         var free = ArrayList(Vector2).init(self.alloc);
         defer free.deinit();
 
-        for (0..self.grid.getRows()) |y| {
-            for (0..self.grid.getCols()) |x| {
+        for (0..@as(usize, @intFromFloat(self.bounds.height))) |y| {
+            for (0..@as(usize, @intFromFloat(self.bounds.width))) |x| {
                 var occupied_idx: ?usize = null;
-                for (occupied.items, 0..) |*coord, i| {
-                    if (coord.x == @as(f32, @floatFromInt(x)) and
-                        coord.y == @as(f32, @floatFromInt(y)))
-                    {
+                for (occupied.items, 0..) |coord, i| {
+                    if (coord.equals(.{
+                        .x = @as(f32, @floatFromInt(x)),
+                        .y = @as(f32, @floatFromInt(y)),
+                    }) == 1) {
                         occupied_idx = i;
                         break;
                     }
@@ -388,10 +387,18 @@ pub const State = struct {
         return colors[self.color_idx][1];
     }
 
+    pub fn gridColor(self: *State) Color {
+        switch (self.game_state) {
+            .seeking => return self.bgColor(),
+            .evaluate => return self.bgColor(),
+            else => return Color.blank,
+        }
+    }
+
     pub fn titleColor(self: *State) Color {
         switch (self.game_state) {
             .title => return Color.light_gray,
-            .starting => return if (self.flashing()) Color.ray_white else Color.blank,
+            .starting => return if (util.flashing(&self.timer)) Color.ray_white else Color.blank,
             else => return Color.blank,
         }
     }
@@ -416,7 +423,7 @@ pub const State = struct {
         switch (self.game_state) {
             .seeking => return self.fgColor(),
             .evaluate => {
-                if (self.flashing()) {
+                if (util.flashing(&self.timer)) {
                     return if (self.combo > 0) Color.ray_white else Color.black;
                 } else {
                     return Color.blank;
@@ -428,15 +435,15 @@ pub const State = struct {
 
     pub fn gameoverColor(self: *State) Color {
         switch (self.game_state) {
-            .gameover => return if (self.blinking()) Color.black else Color.blank,
+            .gameover => return if (util.blinking(&self.timer)) Color.black else Color.blank,
             else => return Color.blank,
         }
     }
 
     pub fn cursorColor(self: *State) Color {
         switch (self.game_state) {
-            .title => return if (self.blinking()) Color.light_gray else Color.black,
-            .seeking => return if (self.blinking()) self.fgColor() else Color.black,
+            .title => return if (util.blinking(&self.timer)) Color.light_gray else Color.black,
+            .seeking => return if (util.blinking(&self.timer)) self.fgColor() else Color.black,
             else => return Color.blank,
         }
     }
@@ -456,19 +463,5 @@ pub const State = struct {
             .gameover => return self.bgColor(),
             else => return Color.blank,
         }
-    }
-
-    fn flashing(self: *State) bool {
-        if (self.timer.read() / 75_000_000 % 2 == 0) {
-            return true;
-        }
-        return false;
-    }
-
-    fn blinking(self: *State) bool {
-        if (self.timer.read() / 400_000_000 % 2 == 0) {
-            return true;
-        }
-        return false;
     }
 };

@@ -1,19 +1,56 @@
+const std = @import("std");
 const rl = @import("raylib");
+const objects = @import("objects");
+const util = @import("util");
 
+const ArrayList = std.ArrayList;
 const Vector2 = rl.Vector2;
-const Grid = @import("objects").grid.Grid;
+const Grid = objects.grid.Grid;
+const State = objects.state.State;
 const Font = rl.Font;
 const Color = rl.Color;
+const assert = util.assert;
 
-const FontSize = enum {
+var font_normal: ?Font = null;
+var font_medium: ?Font = null;
+var font_large: ?Font = null;
+
+pub const FontSize = enum {
     small,
     medium,
     large,
 };
 
-var font_normal: ?Font = null;
-var font_medium: ?Font = null;
-var font_large: ?Font = null;
+pub const Drawable = struct {
+    ptr: *anyopaque,
+    vtab: *const VTab,
+
+    const VTab = struct {
+        draw: *const fn (ptr: *anyopaque, grid: *Grid) void,
+    };
+
+    pub fn draw(self: Drawable, grid: *Grid) void {
+        self.vtab.draw(self.ptr, grid);
+    }
+
+    pub fn init(obj: anytype) Drawable {
+        const Ptr = @TypeOf(obj);
+        const impl = struct {
+            fn draw(ptr: *anyopaque, grid: *Grid) void {
+                const self = @as(Ptr, @ptrCast(@alignCast(ptr)));
+                self.draw(grid);
+            }
+        };
+        return Drawable{
+            .ptr = obj,
+            .vtab = &.{ .draw = impl.draw },
+        };
+    }
+};
+
+pub fn drawToGrid(grid: *Grid, drawables: ArrayList(Drawable)) void {
+    for (drawables.items) |r| r.draw(grid);
+}
 
 pub fn renderGrid(grid: *Grid, position: Vector2, cell_size: usize, font_size: FontSize) void {
     var char: [1:0]u8 = .{0};

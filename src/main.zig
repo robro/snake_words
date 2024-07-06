@@ -11,6 +11,7 @@ const Rectangle = rl.Rectangle;
 const Allocator = std.mem.Allocator;
 const Facing = objects.snake.Facing;
 const TitleSnakeOptions = objects.title.TitleSnakeOptions;
+const Grid = objects.grid.Grid;
 const GridOptions = objects.grid.GridOptions;
 const SnakeOptions = objects.snake.SnakeOptions;
 const State = objects.state.State;
@@ -20,6 +21,7 @@ const setFont = engine.render.setFont;
 const getFont = engine.render.getFont;
 const monoText = engine.render.monoText;
 const renderGrid = engine.render.renderGrid;
+const drawToGrid = engine.render.drawToGrid;
 
 const title = "snake_words";
 
@@ -99,12 +101,14 @@ pub fn main() !void {
 
     var state = try State.init(
         title_snake_options,
-        grid_options,
         snake_options,
         bounds,
         alloc,
     );
     defer state.deinit();
+
+    var grid = try Grid.init(grid_options);
+    defer grid.deinit();
 
     rl.setTargetFPS(fps);
 
@@ -115,8 +119,10 @@ pub fn main() !void {
         defer rl.endDrawing();
 
         rl.clearBackground(bg_color);
-        state.draw();
-        renderGrid(&state.grid, rl.Vector2.zero(), cell_size, .small);
+
+        grid.fill(state.gridColor());
+        drawToGrid(&grid, state.drawables);
+        renderGrid(&grid, Vector2.zero(), cell_size, FontSize.small);
         renderHUD(&state);
         // rl.drawFPS(win_width - 30, 0);
     }
