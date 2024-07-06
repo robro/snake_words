@@ -2,9 +2,11 @@ const std = @import("std");
 const rl = @import("raylib");
 const objects = @import("objects");
 const util = @import("util");
+const math = @import("math");
 
 const ArrayList = std.ArrayList;
 const Vector2 = rl.Vector2;
+const Vec2 = math.Vec2;
 const Grid = objects.grid.Grid;
 const State = objects.state.State;
 const Font = rl.Font;
@@ -61,8 +63,8 @@ pub fn renderGrid(grid: *Grid, position: Vector2, cell_size: usize, font_size: F
                 getFont(font_size),
                 &char,
                 position.add(.{
-                    .x = @floatFromInt(x * cell_size + cell_size / 4),
-                    .y = @floatFromInt(y * cell_size + cell_size / 4),
+                    .x = @floatFromInt(x * cell_size),
+                    .y = @floatFromInt(y * cell_size),
                 }),
                 @floatFromInt(cell_size),
                 0,

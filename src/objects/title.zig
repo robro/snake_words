@@ -1,10 +1,11 @@
 const std = @import("std");
 const rl = @import("raylib");
+const math = @import("math");
 
 const Cell = @import("grid.zig").Cell;
 const Grid = @import("grid.zig").Grid;
 const Facing = @import("snake.zig").Facing;
-const Vector2 = rl.Vector2;
+const Vec2 = math.Vec2;
 const Color = rl.Color;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
@@ -23,7 +24,7 @@ pub const TitleSnakeOptions = struct {
 pub const TitleSnake = struct {
     color: Color,
     cells: ArrayList(Cell),
-    coords: ArrayList(Vector2),
+    coords: ArrayList(Vec2),
     tick: f64,
     last_tick: ?f64 = null,
 
@@ -37,12 +38,12 @@ pub const TitleSnake = struct {
         var ts = TitleSnake{
             .color = options.color,
             .cells = ArrayList(Cell).init(options.alloc),
-            .coords = ArrayList(Vector2).init(options.alloc),
+            .coords = ArrayList(Vec2).init(options.alloc),
             .tick = options.tick,
         };
         var reversed = false;
         var facing = Facing.right;
-        var coord = Vector2{ .x = 1, .y = 0 };
+        var coord = Vec2{ .x = 1, .y = 0 };
         var turn_wait: i32 = 0;
         var text_idx: usize = 0;
         const text = "snake_words";
@@ -57,12 +58,12 @@ pub const TitleSnake = struct {
             try ts.coords.append(coord);
 
             if (!reversed) {
-                if (coord.x == @as(f32, @floatFromInt(options.cols - 1))) {
+                if (coord.x == options.cols - 1) {
                     if (facing == .right) {
                         facing = .down;
                         turn_wait = 3;
                     } else if (facing == .down) {
-                        if (coord.y == @as(f32, @floatFromInt(options.rows - 1))) {
+                        if (coord.y == options.rows - 1) {
                             facing = .left;
                             reversed = true;
                         } else if (turn_wait == 0 and options.cols > 2) {
@@ -92,7 +93,7 @@ pub const TitleSnake = struct {
                             facing = .right;
                         }
                     }
-                } else if (coord.x == @as(f32, @floatFromInt(options.cols - 1))) {
+                } else if (coord.x == options.cols - 1) {
                     if (facing == .right) {
                         facing = .up;
                     } else if (facing == .up) {
@@ -140,6 +141,6 @@ test "title snake" {
     try expect(ts.coords.items.len == rows * cols);
     try expect(std.meta.eql(
         ts.coords.items[ts.coords.items.len - 1].coord,
-        Vector2{ .x = 0, .y = 0 },
+        Vec2{ .x = 0, .y = 0 },
     ));
 }

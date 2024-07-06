@@ -2,13 +2,14 @@ const std = @import("std");
 const rl = @import("raylib");
 const engine = @import("engine");
 const util = @import("util");
+const math = @import("math");
 
-const Rectangle = rl.Rectangle;
+const Vec2 = math.Vec2;
+const Range2 = math.Range2;
 const Grid = @import("grid.zig").Grid;
 const Cell = @import("grid.zig").Cell;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
-const Vector2 = rl.Vector2;
 const InputQueue = engine.input.InputQueue;
 const assert = util.assert;
 
@@ -21,14 +22,14 @@ pub const Facing = enum {
 
 pub const Part = struct {
     facing: Facing,
-    coord: Vector2,
+    coord: Vec2,
 };
 
 pub const SnakeOptions = struct {
     text: [:0]const u8,
     color: rl.Color,
     tick: f64,
-    coord: Vector2,
+    coord: Vec2,
     facing: Facing,
     alloc: Allocator,
 };
@@ -53,10 +54,10 @@ pub const Snake = struct {
             part.facing = options.facing;
             part.coord = options.coord;
             switch (part.facing) {
-                .up => part.coord.y += @as(f32, @floatFromInt(i)),
-                .down => part.coord.y -= @as(f32, @floatFromInt(i)),
-                .left => part.coord.x += @as(f32, @floatFromInt(i)),
-                .right => part.coord.x -= @as(f32, @floatFromInt(i)),
+                .up => part.coord.y += @as(i32, @intCast(i)),
+                .down => part.coord.y -= @as(i32, @intCast(i)),
+                .left => part.coord.x += @as(i32, @intCast(i)),
+                .right => part.coord.x -= @as(i32, @intCast(i)),
             }
         }
         return Snake{ .cells = cells, .parts = parts, .tick = options.tick };
@@ -105,12 +106,12 @@ pub const Snake = struct {
         }
     }
 
-    pub fn colliding(self: *Snake, bounds: Rectangle) bool {
-        if (!rl.checkCollisionPointRec(self.head().coord, bounds)) {
+    pub fn colliding(self: *Snake, bounds: Range2) bool {
+        if (!bounds.contains(self.head().coord)) {
             return true;
         }
         for (self.parts.items[1..]) |*part| {
-            if (self.head().coord.equals(part.coord) == 1) {
+            if (self.head().coord.eql(part.coord)) {
                 return true;
             }
         }

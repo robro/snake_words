@@ -1,8 +1,9 @@
 const std = @import("std");
 const rl = @import("raylib");
+const math = @import("math");
 
 const Allocator = std.mem.Allocator;
-const Vector2 = rl.Vector2;
+const Vec2 = math.Vec2;
 const Color = rl.Color;
 
 pub const Cell = struct {
@@ -41,13 +42,13 @@ pub const Grid = struct {
         self.alloc.free(self.cells);
     }
 
-    pub fn setCell(self: *Grid, cell: Cell, coord: Vector2) void {
-        if (coord.x < 0 or coord.x >= @as(f32, @floatFromInt(self.getCols())) or
-            coord.y < 0 or coord.y >= @as(f32, @floatFromInt(self.getRows())))
+    pub fn setCell(self: *Grid, cell: Cell, coord: Vec2) void {
+        if (coord.x < 0 or coord.x >= self.getCols() or
+            coord.y < 0 or coord.y >= self.getRows())
         {
             return;
         }
-        self.cells[@intFromFloat(coord.y)][@intFromFloat(coord.x)] = cell;
+        self.cells[@intCast(coord.y)][@intCast(coord.x)] = cell;
     }
 
     pub fn fill(self: *Grid, color: ?Color) void {

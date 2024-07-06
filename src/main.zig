@@ -4,10 +4,12 @@ const engine = @import("engine");
 const objects = @import("objects");
 const util = @import("util");
 const scratch = @import("scratch");
+const math = @import("math");
 
 const Color = rl.Color;
+const Vec2 = math.Vec2;
+const Range2 = math.Range2;
 const Vector2 = rl.Vector2;
-const Rectangle = rl.Rectangle;
 const Allocator = std.mem.Allocator;
 const Facing = objects.snake.Facing;
 const TitleSnakeOptions = objects.title.TitleSnakeOptions;
@@ -51,7 +53,7 @@ const snake_text = "snake";
 const snake_color = Color.ray_white;
 const title_snake_color = Color.ray_white;
 const snake_tick = 0.125;
-const snake_coord = Vector2{ .x = grid_cols - 4, .y = grid_rows / 2 };
+const snake_coord = Vec2{ .x = grid_cols - 4, .y = grid_rows / 2 };
 const snake_facing = Facing.left;
 
 // Misc
@@ -75,7 +77,7 @@ pub fn main() !void {
         if (deinit_status == .leak) @panic("gpa leaked!");
     }
 
-    const bounds = Rectangle.init(0, 0, grid_cols, grid_rows);
+    const bounds = Range2.init(0, 0, grid_rows, grid_cols);
 
     const title_snake_options = TitleSnakeOptions{
         .color = title_snake_color,

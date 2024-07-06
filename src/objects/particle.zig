@@ -1,23 +1,24 @@
 const std = @import("std");
 const rl = @import("raylib");
 const util = @import("util");
+const math = @import("math");
 
-const Rectangle = rl.Rectangle;
 const ArrayList = std.ArrayList;
 const StringHashMap = std.StringHashMap;
 const Color = rl.Color;
-const Vector2 = rl.Vector2;
+const Vec2 = math.Vec2;
+const Range2 = math.Range2;
 const Timer = std.time.Timer;
 const Allocator = std.mem.Allocator;
 const Grid = @import("grid.zig").Grid;
 
 const Particle = struct {
     src_color: Color,
-    coord: Vector2,
+    coord: Vec2,
     timer: Timer,
     lifetime: u64, // ms
 
-    pub fn init(start_color: Color, coord: Vector2, lifetime: u64) !Particle {
+    pub fn init(start_color: Color, coord: Vec2, lifetime: u64) !Particle {
         util.assert(lifetime > 0, "lifetime must be greater than zero!", .{});
         return Particle{
             .src_color = start_color,
@@ -40,8 +41,8 @@ pub const Trail = struct {
     particles: ArrayList(Particle),
     color: Color,
     lifetime: u64, // ms
-    coord: ?Vector2 = null,
-    last_coord: ?Vector2 = null,
+    coord: ?Vec2 = null,
+    last_coord: ?Vec2 = null,
 
     pub fn init(color: Color, lifetime: u64, alloc: Allocator) Trail {
         return Trail{
@@ -62,7 +63,7 @@ pub const Trail = struct {
         while (self.particles.items.len > 0 and self.particles.items[0].finished()) {
             _ = self.particles.orderedRemove(0);
         }
-        if (self.last_coord == null or self.last_coord.?.equals(self.coord.?) == 0) {
+        if (self.last_coord == null or !self.last_coord.?.eql(self.coord.?)) {
             self.last_coord = self.coord.?;
             try self.particles.append(try Particle.init(self.color, self.last_coord.?, self.lifetime));
         }
@@ -82,9 +83,9 @@ pub const SplashOptions = struct {
 pub const Splash = struct {
     particles: ArrayList(Particle),
     queue: ArrayList(NumberedVec2),
-    visited: ArrayList(Vector2),
+    visited: ArrayList(Vec2),
     color: Color,
-    coord: Vector2,
+    coord: Vec2,
     max_size: usize,
     lifetime: u64, // ms
     tick: f64, // seconds
@@ -94,24 +95,24 @@ pub const Splash = struct {
 
     const NumberedVec2 = struct {
         num: usize,
-        coord: Vector2,
+        coord: Vec2,
     };
 
-    const offsets = [_]Vector2{
+    const offsets = [_]Vec2{
         .{ .x = 0, .y = -1 },
         .{ .x = 0, .y = 1 },
         .{ .x = -1, .y = 0 },
         .{ .x = 1, .y = 0 },
     };
 
-    pub fn init(color: Color, coord: Vector2, max_size: usize, lifetime: u64, tick: f64, alloc: Allocator) !Splash {
+    pub fn init(color: Color, coord: Vec2, max_size: usize, lifetime: u64, tick: f64, alloc: Allocator) !Splash {
         util.assert(max_size > 0, "max_size must be greater than zero!", .{});
         util.assert(lifetime > 0, "lifetime must be greater than zero!", .{});
 
         var splash = Splash{
             .particles = ArrayList(Particle).init(alloc),
             .queue = ArrayList(NumberedVec2).init(alloc),
-            .visited = ArrayList(Vector2).init(alloc),
+            .visited = ArrayList(Vec2).init(alloc),
             .color = color,
             .coord = coord,
             .max_size = max_size,
@@ -129,7 +130,7 @@ pub const Splash = struct {
         self.visited.deinit();
     }
 
-    pub fn update(self: *Splash, bounds: Rectangle) !void {
+    pub fn update(self: *Splash, bounds: Range2) !void {
         defer while (self.particles.items.len > 0 and self.particles.items[0].finished()) {
             _ = self.particles.orderedRemove(0);
             self.finished_count += 1;
@@ -151,11 +152,11 @@ pub const Splash = struct {
             try self.particles.append(try Particle.init(self.color, num_vec.coord, self.lifetime));
             outer: for (offsets) |offset| {
                 const next_coord = num_vec.coord.add(offset);
-                if (!rl.checkCollisionPointRec(next_coord, bounds)) {
+                if (!bounds.contains(next_coord)) {
                     continue;
                 }
-                for (self.visited.items) |*coord| {
-                    if (next_coord.equals(coord.*) == 1) {
+                for (self.visited.items) |coord| {
+                    if (next_coord.eql(coord)) {
                         continue :outer;
                     }
                 }
@@ -189,7 +190,7 @@ pub const SplashGroup = struct {
         self.splashes.deinit();
     }
 
-    pub fn spawnSplash(self: *SplashGroup, color: Color, coord: Vector2, options: SplashOptions) !void {
+    pub fn spawnSplash(self: *SplashGroup, color: Color, coord: Vec2, options: SplashOptions) !void {
         try self.splashes.append(try Splash.init(
             color,
             coord,
@@ -200,7 +201,7 @@ pub const SplashGroup = struct {
         ));
     }
 
-    pub fn update(self: *SplashGroup, bounds: Rectangle) !void {
+    pub fn update(self: *SplashGroup, bounds: Range2) !void {
         for (self.splashes.items) |*splash| {
             try splash.update(bounds);
         }
@@ -233,13 +234,13 @@ pub fn lerpColor(src_color: Color, current: u64, limit: u64) Color {
 
 pub fn drawParticles(particles: *ArrayList(Particle), grid: *Grid) void {
     for (particles.items) |*p| {
-        if (p.coord.x < 0 or p.coord.x >= @as(f32, @floatFromInt(grid.getCols())) or
-            p.coord.y < 0 or p.coord.y >= @as(f32, @floatFromInt(grid.getCols())))
+        if (p.coord.x < 0 or p.coord.x >= grid.getCols() or
+            p.coord.y < 0 or p.coord.y >= grid.getCols())
         {
             continue;
         }
-        const x: usize = @intFromFloat(p.coord.x);
-        const y: usize = @intFromFloat(p.coord.y);
+        const x: usize = @intCast(p.coord.x);
+        const y: usize = @intCast(p.coord.y);
         const grid_color = grid.cells[y][x].color;
         const r: u8 = @min(255, @as(u16, p.color().r) + grid_color.r);
         const g: u8 = @min(255, @as(u16, p.color().g) + grid_color.g);

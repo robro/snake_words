@@ -2,10 +2,11 @@ const std = @import("std");
 const rl = @import("raylib");
 const engine = @import("engine");
 const util = @import("util");
+const math = @import("math");
 
 const Grid = @import("grid.zig").Grid;
 const Cell = @import("grid.zig").Cell;
-const Vector2 = rl.Vector2;
+const Vec2 = math.Vec2;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const Timer = std.time.Timer;
@@ -13,11 +14,11 @@ const Color = rl.Color;
 
 pub const Food = struct {
     cell: Cell,
-    coord: Vector2,
+    coord: Vec2,
     timer: Timer,
     wait_time_ms: usize = 500,
 
-    pub fn init(cell: Cell, coord: Vector2) !Food {
+    pub fn init(cell: Cell, coord: Vec2) !Food {
         return Food{
             .cell = cell,
             .coord = coord,

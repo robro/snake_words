@@ -3,8 +3,8 @@ const rl = @import("raylib");
 const util = @import("util");
 const scratch = @import("scratch");
 const engine = @import("engine");
+const math = @import("math");
 
-const Rectangle = rl.Rectangle;
 const Drawable = engine.render.Drawable;
 const TitleSnake = @import("title.zig").TitleSnake;
 const TitleSnakeOptions = @import("title.zig").TitleSnakeOptions;
@@ -19,7 +19,8 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const Timer = std.time.Timer;
 const InputQueue = engine.input.InputQueue;
-const Vector2 = rl.Vector2;
+const Range2 = math.Range2;
+const Vec2 = math.Vec2;
 const Color = rl.Color;
 
 const GameState = enum {
@@ -45,7 +46,7 @@ pub const State = struct {
     snake: Snake,
     food_group: FoodGroup,
     splash_group: SplashGroup,
-    bounds: Rectangle,
+    bounds: Range2,
     trail: Trail,
     title_snake_options: TitleSnakeOptions,
     snake_options: SnakeOptions,
@@ -87,7 +88,7 @@ pub const State = struct {
     pub fn init(
         title_snake_options: TitleSnakeOptions,
         snake_options: SnakeOptions,
-        bounds: Rectangle,
+        bounds: Range2,
         alloc: Allocator,
     ) !State {
         var state = State{
@@ -167,7 +168,7 @@ pub const State = struct {
             return;
         }
         for (self.food_group.food.items, 0..) |*food, i| {
-            if (!food.edible() or self.snake.head().coord.equals(food.coord) == 0) {
+            if (!food.edible() or !self.snake.head().coord.eql(food.coord)) {
                 continue;
             }
             try self.snake.append(self.food_group.pop(i).cell);
@@ -287,8 +288,8 @@ pub const State = struct {
         }
     }
 
-    fn getFreeCoord(self: *State) ?Vector2 {
-        var occupied = ArrayList(Vector2).init(self.alloc);
+    fn getFreeCoord(self: *State) ?Vec2 {
+        var occupied = ArrayList(Vec2).init(self.alloc);
         defer occupied.deinit();
 
         for (self.snake.parts.items) |*part| {
@@ -297,25 +298,25 @@ pub const State = struct {
         for (self.food_group.food.items) |*food| {
             occupied.append(food.coord) catch continue;
         }
-        var free = ArrayList(Vector2).init(self.alloc);
+        var free = ArrayList(Vec2).init(self.alloc);
         defer free.deinit();
 
-        for (0..@as(usize, @intFromFloat(self.bounds.height))) |y| {
-            for (0..@as(usize, @intFromFloat(self.bounds.width))) |x| {
+        for (0..self.bounds.height()) |y| {
+            for (0..self.bounds.width()) |x| {
                 var occupied_idx: ?usize = null;
                 for (occupied.items, 0..) |coord, i| {
-                    if (coord.equals(.{
-                        .x = @as(f32, @floatFromInt(x)),
-                        .y = @as(f32, @floatFromInt(y)),
-                    }) == 1) {
+                    if (coord.eql(.{
+                        .x = @as(i32, @intCast(x)),
+                        .y = @as(i32, @intCast(y)),
+                    })) {
                         occupied_idx = i;
                         break;
                     }
                 }
                 if (occupied_idx == null) {
                     free.append(.{
-                        .x = @as(f32, @floatFromInt(x)),
-                        .y = @as(f32, @floatFromInt(y)),
+                        .x = @as(i32, @intCast(x)),
+                        .y = @as(i32, @intCast(y)),
                     }) catch continue;
                 } else {
                     _ = occupied.swapRemove(occupied_idx.?);
