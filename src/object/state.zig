@@ -23,23 +23,6 @@ const Range2 = math.Range2;
 const Vec2 = math.Vec2;
 const Color = rl.Color;
 
-const GameState = enum {
-    title,
-    starting,
-    seeking,
-    evaluate,
-    gameover,
-};
-
-const colors = [_][2]Color{
-    .{ Color.orange, Color.dark_brown },
-    .{ Color.green, Color.dark_green },
-    .{ Color.purple, Color.dark_purple },
-    .{ Color.yellow, Color.dark_brown },
-    .{ Color.sky_blue, Color.dark_blue },
-    .{ Color.red, Color.init(100, 20, 30, 255) },
-};
-
 pub const State = struct {
     drawables: ArrayList(Drawable),
     title_snake: TitleSnake,
@@ -55,6 +38,7 @@ pub const State = struct {
     alloc: Allocator,
     timer: Timer,
     input_queue: InputQueue,
+    colors: []const [2]Color,
     color_idx: usize,
 
     word_idx: usize = 0,
@@ -85,10 +69,19 @@ pub const State = struct {
         .tick = 0.04,
     },
 
+    const GameState = enum {
+        title,
+        starting,
+        seeking,
+        evaluate,
+        gameover,
+    };
+
     pub fn init(
         title_snake_options: TitleSnakeOptions,
         snake_options: SnakeOptions,
         bounds: Range2,
+        colors: []const [2]Color,
         alloc: Allocator,
     ) !State {
         var state = State{
@@ -106,6 +99,7 @@ pub const State = struct {
             .alloc = alloc,
             .timer = try Timer.start(),
             .input_queue = InputQueue.init(alloc),
+            .colors = colors,
             .color_idx = std.crypto.random.uintLessThan(usize, colors.len),
         };
         for (state.word_indices, 0..) |*idx, i| idx.* = i;
@@ -132,6 +126,7 @@ pub const State = struct {
             self.title_snake_options,
             self.snake_options,
             self.bounds,
+            self.colors,
             self.alloc,
         );
     }
@@ -186,13 +181,13 @@ pub const State = struct {
                 self.setState(GameState.evaluate);
             } else {
                 try self.splash_group.spawnSplash(self.fgColor(), self.snake.head().coord, self.small_splash);
+                self.timer.reset();
             }
             self.combo += 1;
             self.max_combo = @max(self.max_combo, self.combo);
             self.prev_score = self.score;
             self.score += 10 * self.multiplier;
             self.score_time = rl.getTime();
-            self.timer.reset();
             return;
         }
     }
@@ -206,7 +201,7 @@ pub const State = struct {
         if (!self.waiting(self.eval_time)) {
             self.setTailColor(if (self.combo > 0) Color.ray_white else Color.gray);
             self.partial_idx = self.snake.length();
-            self.color_idx = (self.color_idx + 1) % colors.len;
+            self.color_idx = (self.color_idx + 1) % self.colors.len;
             self.target_word = self.nextTarget();
             try self.spawnFood(self.target_word, self.fgColor());
             self.setState(GameState.seeking);
@@ -381,11 +376,11 @@ pub const State = struct {
     }
 
     pub fn fgColor(self: *State) Color {
-        return colors[self.color_idx][0];
+        return self.colors[self.color_idx][0];
     }
 
     pub fn bgColor(self: *State) Color {
-        return colors[self.color_idx][1];
+        return self.colors[self.color_idx][1];
     }
 
     pub fn gridColor(self: *State) Color {

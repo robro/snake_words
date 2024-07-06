@@ -60,6 +60,14 @@ const snake_facing = Facing.left;
 const empty_char: u8 = '.';
 const bg_color = Color.black;
 const fps = 60;
+const colors: []const [2]Color = &.{
+    .{ Color.orange, Color.dark_brown },
+    .{ Color.green, Color.dark_green },
+    .{ Color.purple, Color.dark_purple },
+    .{ Color.yellow, Color.dark_brown },
+    .{ Color.sky_blue, Color.dark_blue },
+    .{ Color.red, Color.init(100, 20, 30, 255) },
+};
 
 pub fn main() !void {
     rl.setConfigFlags(.{ .msaa_4x_hint = true, .vsync_hint = true });
@@ -105,6 +113,7 @@ pub fn main() !void {
         title_snake_options,
         snake_options,
         bounds,
+        colors,
         alloc,
     );
     defer state.deinit();
@@ -123,7 +132,7 @@ pub fn main() !void {
         rl.clearBackground(bg_color);
 
         grid.fill(state.gridColor());
-        drawToGrid(&grid, state.drawables);
+        drawToGrid(&grid, &state.drawables);
         renderGrid(&grid, Vector2.zero(), cell_size, FontSize.small);
         renderHUD(&state);
         // rl.drawFPS(win_width - 30, 0);

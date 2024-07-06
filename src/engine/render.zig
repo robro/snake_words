@@ -13,9 +13,9 @@ const Font = rl.Font;
 const Color = rl.Color;
 const assert = util.assert;
 
-var font_normal: ?Font = null;
-var font_medium: ?Font = null;
-var font_large: ?Font = null;
+var FONT_NORMAL: ?Font = null;
+var FONT_MEDIUM: ?Font = null;
+var FONT_LARGE: ?Font = null;
 
 pub const FontSize = enum {
     small,
@@ -25,9 +25,9 @@ pub const FontSize = enum {
 
 pub const Drawable = struct {
     ptr: *anyopaque,
-    vtab: *const VTab,
+    vtab: *const VTable,
 
-    const VTab = struct {
+    const VTable = struct {
         draw: *const fn (ptr: *anyopaque, grid: *Grid) void,
     };
 
@@ -50,7 +50,7 @@ pub const Drawable = struct {
     }
 };
 
-pub fn drawToGrid(grid: *Grid, drawables: ArrayList(Drawable)) void {
+pub fn drawToGrid(grid: *Grid, drawables: *ArrayList(Drawable)) void {
     for (drawables.items) |r| r.draw(grid);
 }
 
@@ -91,18 +91,18 @@ pub fn monoText(font: Font, text: [:0]const u8, position: Vector2, font_size: f3
 
 pub fn setFont(font_size: FontSize, font: Font) void {
     switch (font_size) {
-        .small => font_normal = font,
-        .medium => font_medium = font,
-        .large => font_large = font,
+        .small => FONT_NORMAL = font,
+        .medium => FONT_MEDIUM = font,
+        .large => FONT_LARGE = font,
     }
 }
 
 pub fn getFont(font_size: FontSize) Font {
-    var font: ?Font = undefined;
+    var font: ?Font = null;
     switch (font_size) {
-        .small => font = font_normal,
-        .medium => font = font_medium,
-        .large => font = font_large,
+        .small => font = FONT_NORMAL,
+        .medium => font = FONT_MEDIUM,
+        .large => font = FONT_LARGE,
     }
     return if (font == null) rl.getFontDefault() else font.?;
 }
